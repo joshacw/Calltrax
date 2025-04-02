@@ -1,21 +1,20 @@
-
 import { GraphDataPoint } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
 interface PerformanceChartProps {
   data: GraphDataPoint[];
 }
 
 export const PerformanceChart = ({ data }: PerformanceChartProps) => {
-  // If no data is provided, generate demo data
-  const chartData = data.length > 0 ? data : generateDemoData();
+  // Use static data instead of generating random data
+  const staticChartData = getStaticChartData();
   
   return (
     <div className="w-full h-80">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={chartData}
+          data={staticChartData}
           margin={{
             top: 10,
             right: 30,
@@ -67,7 +66,45 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
   );
 };
 
-// Generate demo data when real data isn't available
+// Static data for the chart
+const getStaticChartData = (): GraphDataPoint[] => {
+  const data: GraphDataPoint[] = [
+    { date: "2023-05-01", calls: 30, connections: 18, appointments: 5 },
+    { date: "2023-05-02", calls: 25, connections: 15, appointments: 4 },
+    { date: "2023-05-03", calls: 35, connections: 22, appointments: 7 },
+    { date: "2023-05-04", calls: 40, connections: 28, appointments: 9 },
+    { date: "2023-05-05", calls: 28, connections: 17, appointments: 5 },
+    { date: "2023-05-06", calls: 22, connections: 13, appointments: 3 },
+    { date: "2023-05-07", calls: 18, connections: 10, appointments: 2 },
+    { date: "2023-05-08", calls: 42, connections: 30, appointments: 10 },
+    { date: "2023-05-09", calls: 38, connections: 25, appointments: 8 },
+    { date: "2023-05-10", calls: 32, connections: 20, appointments: 6 },
+    { date: "2023-05-11", calls: 27, connections: 16, appointments: 4 },
+    { date: "2023-05-12", calls: 33, connections: 21, appointments: 7 },
+    { date: "2023-05-13", calls: 45, connections: 32, appointments: 12 },
+    { date: "2023-05-14", calls: 36, connections: 24, appointments: 9 },
+    { date: "2023-05-15", calls: 31, connections: 19, appointments: 6 },
+    { date: "2023-05-16", calls: 29, connections: 18, appointments: 5 },
+    { date: "2023-05-17", calls: 37, connections: 25, appointments: 8 },
+    { date: "2023-05-18", calls: 34, connections: 22, appointments: 7 },
+    { date: "2023-05-19", calls: 39, connections: 26, appointments: 9 },
+    { date: "2023-05-20", calls: 43, connections: 30, appointments: 10 },
+    { date: "2023-05-21", calls: 41, connections: 28, appointments: 9 },
+    { date: "2023-05-22", calls: 36, connections: 24, appointments: 8 },
+    { date: "2023-05-23", calls: 30, connections: 19, appointments: 6 },
+    { date: "2023-05-24", calls: 32, connections: 21, appointments: 7 },
+    { date: "2023-05-25", calls: 28, connections: 17, appointments: 5 },
+    { date: "2023-05-26", calls: 26, connections: 16, appointments: 4 },
+    { date: "2023-05-27", calls: 24, connections: 14, appointments: 3 },
+    { date: "2023-05-28", calls: 35, connections: 23, appointments: 8 },
+    { date: "2023-05-29", calls: 38, connections: 26, appointments: 9 },
+    { date: "2023-05-30", calls: 33, connections: 22, appointments: 7 },
+  ];
+  
+  return data;
+};
+
+// Keep the original demo data generation function as a fallback
 const generateDemoData = (): GraphDataPoint[] => {
   const data: GraphDataPoint[] = [];
   const now = new Date();

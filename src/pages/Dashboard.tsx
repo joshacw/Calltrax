@@ -1,3 +1,4 @@
+
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Layout } from "@/components/Layout";
 import { MetricCard, StatCard } from "@/components/MetricCard";
@@ -73,6 +74,12 @@ const Dashboard = () => {
         
         {user?.role === "admin" && <InsightsPanel />}
         
+        {/* Performance Chart - moved above metrics */}
+        <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
+          <h2 className="text-lg font-semibold mb-4">Performance Trends</h2>
+          <PerformanceChart data={metrics.graphData || []} />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard 
             title="Average Speed to Lead" 
@@ -114,12 +121,6 @@ const Dashboard = () => {
             title="Number of Appointments" 
             value={metrics.numberOfAppointments} 
           />
-        </div>
-        
-        {/* Performance Chart */}
-        <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Performance Trends</h2>
-          <PerformanceChart data={metrics.graphData || []} />
         </div>
       </div>
     </Layout>

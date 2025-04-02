@@ -19,6 +19,12 @@ const PublicDashboard = () => {
         <p className="text-muted-foreground">Public view - Read only</p>
       </div>
       
+      {/* Performance Chart - moved above metrics */}
+      <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
+        <h2 className="text-lg font-semibold mb-4">Performance Trends</h2>
+        <PerformanceChart data={metrics.graphData || []} />
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard 
           title="Average Speed to Lead" 
@@ -60,11 +66,6 @@ const PublicDashboard = () => {
           title="Number of Appointments" 
           value={metrics.numberOfAppointments} 
         />
-      </div>
-      
-      <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Performance Trends</h2>
-        <PerformanceChart data={metrics.graphData || []} />
       </div>
       
       <div className="text-center text-xs text-muted-foreground mt-8">
