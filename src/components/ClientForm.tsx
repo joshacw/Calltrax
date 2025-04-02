@@ -46,8 +46,10 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
   const [steps, setSteps] = useState<Record<string, StepStatus>>({
     createChannel: { status: "pending", message: "Create channel in Dialpad" },
     createCallCenter: { status: "pending", message: "Create call center in Dialpad" },
-    setupHangupWebhook: { status: "pending", message: "Setup webhook for hangup events" },
-    setupDispositionWebhook: { status: "pending", message: "Setup webhook for disposition events" },
+    createHangupEndpoint: { status: "pending", message: "Create endpoint for hangup events" },
+    createDispositionEndpoint: { status: "pending", message: "Create endpoint for disposition events" },
+    setupHangupSubscription: { status: "pending", message: "Setup subscription for hangup events" },
+    setupDispositionSubscription: { status: "pending", message: "Setup subscription for disposition events" },
   });
   
   const form = useForm<ClientFormValues>({
@@ -72,33 +74,36 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
       
       // Step 1: Create a channel in Dialpad
       updateStep("createChannel", "loading");
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-      updateStep("createChannel", "completed");
-      
-      // Step 2: Create a call center in Dialpad
-      updateStep("createCallCenter", "loading");
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-      updateStep("createCallCenter", "completed");
-      
-      // Step 3: Setup webhook for hangup events
-      updateStep("setupHangupWebhook", "loading");
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-      updateStep("setupHangupWebhook", "completed");
-      
-      // Step 4: Setup webhook for disposition events
-      updateStep("setupDispositionWebhook", "loading");
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-      updateStep("setupDispositionWebhook", "completed");
       
       // In a real app, this would call the real Dialpad API
-      // const result = await createDialpadClient(data.name);
-      // console.log("Dialpad integration completed:", result);
-      
-      toast.success(`Client ${data.name} has been created with all Dialpad integrations.`);
-      form.reset();
-      
-      if (onSuccess) {
-        onSuccess(data.name);
+      // Here we're using our mock implementation
+      try {
+        const result = await createDialpadClient(data.name);
+        console.log("Dialpad integration completed:", result);
+        
+        // Update steps status based on results
+        updateStep("createChannel", "completed");
+        updateStep("createCallCenter", "completed");
+        updateStep("createHangupEndpoint", "completed");
+        updateStep("createDispositionEndpoint", "completed");
+        updateStep("setupHangupSubscription", "completed");
+        updateStep("setupDispositionSubscription", "completed");
+        
+        toast.success(`Client ${data.name} has been created with all Dialpad integrations.`);
+        form.reset();
+        
+        if (onSuccess) {
+          onSuccess(data.name);
+        }
+      } catch (error) {
+        console.error("Error during Dialpad integration:", error);
+        // Mark any pending steps as error
+        Object.keys(steps).forEach(step => {
+          if (steps[step].status === "loading" || steps[step].status === "pending") {
+            updateStep(step, "error");
+          }
+        });
+        toast.error("There was an error setting up the Dialpad integration. Please try again.");
       }
     } catch (error) {
       console.error("Error creating client:", error);

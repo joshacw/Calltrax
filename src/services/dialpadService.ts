@@ -26,6 +26,22 @@ export interface DialpadWebhook {
   created_at: string;
 }
 
+export interface DialpadEndpoint {
+  id: string;
+  url: string;
+  created_at: string;
+}
+
+export interface DialpadSubscription {
+  id: string;
+  enabled: boolean;
+  call_states: string[];
+  endpoint_id: string;
+  target_type: string;
+  target_id: string;
+  created_at: string;
+}
+
 // Get the Dialpad API token from localStorage
 const getDialpadApiToken = (): string => {
   return localStorage.getItem("dialpadApiToken") || "";
@@ -35,8 +51,10 @@ const getDialpadApiToken = (): string => {
 export const createDialpadClient = async (clientName: string): Promise<{
   channel: DialpadChannel;
   callCenter: DialpadCallCenter;
-  hangupWebhook: DialpadWebhook;
-  dispositionWebhook: DialpadWebhook;
+  hangupEndpoint: DialpadEndpoint;
+  dispositionEndpoint: DialpadEndpoint;
+  hangupSubscription: DialpadSubscription;
+  dispositionSubscription: DialpadSubscription;
 }> => {
   // Check if API token exists
   const apiToken = getDialpadApiToken();
@@ -52,24 +70,35 @@ export const createDialpadClient = async (clientName: string): Promise<{
   // Create a call center
   const callCenter = await createDialpadCallCenter(clientName, channel.id);
   
-  // Setup webhooks
-  const hangupWebhook = await setupDialpadWebhook(
-    callCenter.id,
-    'call.hangup',
+  // Create endpoints for webhooks
+  const hangupEndpoint = await createDialpadEndpoint(
     `https://api.calltrax.com/webhooks/dialpad/hangup/${callCenter.id}`
   );
   
-  const dispositionWebhook = await setupDialpadWebhook(
-    callCenter.id,
-    'call.disposition',
+  const dispositionEndpoint = await createDialpadEndpoint(
     `https://api.calltrax.com/webhooks/dialpad/disposition/${callCenter.id}`
+  );
+  
+  // Setup event subscriptions
+  const hangupSubscription = await createDialpadSubscription(
+    callCenter.id,
+    ["hangup"],
+    hangupEndpoint.id
+  );
+  
+  const dispositionSubscription = await createDialpadSubscription(
+    callCenter.id,
+    ["disposition"],
+    dispositionEndpoint.id
   );
   
   return {
     channel,
     callCenter,
-    hangupWebhook,
-    dispositionWebhook
+    hangupEndpoint,
+    dispositionEndpoint,
+    hangupSubscription,
+    dispositionSubscription
   };
 };
 
@@ -100,20 +129,36 @@ const createDialpadCallCenter = async (name: string, channelId: string): Promise
   };
 };
 
-// Mock setting up a webhook in Dialpad
-const setupDialpadWebhook = async (
-  callCenterId: string,
-  eventType: string,
-  url: string
-): Promise<DialpadWebhook> => {
+// Mock creating an endpoint in Dialpad
+const createDialpadEndpoint = async (url: string): Promise<DialpadEndpoint> => {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   // Return mock response
   return {
-    id: `wh_${Math.random().toString(36).substring(2, 10)}`,
+    id: `ep_${Math.random().toString(36).substring(2, 10)}`,
     url,
-    event_type: eventType,
+    created_at: new Date().toISOString()
+  };
+};
+
+// Mock creating a subscription in Dialpad
+const createDialpadSubscription = async (
+  callCenterId: string,
+  callStates: string[],
+  endpointId: string
+): Promise<DialpadSubscription> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Return mock response
+  return {
+    id: `sub_${Math.random().toString(36).substring(2, 10)}`,
+    enabled: true,
+    call_states: callStates,
+    endpoint_id: endpointId,
+    target_type: "callcenter",
+    target_id: callCenterId,
     created_at: new Date().toISOString()
   };
 };
