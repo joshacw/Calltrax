@@ -43,7 +43,14 @@ export const DialpadCallCenters = ({ onCreateAgencies }: DialpadCallCentersProps
       
       // Create a set of existing call center IDs for quick lookup
       const existingCallCenterIds = new Set(
-        existingSettings?.map(setting => setting.settings?.call_center_id) || []
+        existingSettings?.map(setting => {
+          // Handle the type more carefully
+          const settings = setting.settings;
+          if (typeof settings === 'object' && settings !== null && 'call_center_id' in settings) {
+            return settings.call_center_id;
+          }
+          return null;
+        }).filter(Boolean) || []
       );
       
       // Filter out call centers that already exist in our system
@@ -193,7 +200,7 @@ export const DialpadCallCenters = ({ onCreateAgencies }: DialpadCallCentersProps
               <Checkbox 
                 id="select-all" 
                 checked={allSelected} 
-                indeterminate={someSelected}
+                // Remove the indeterminate property as it's not supported
                 onCheckedChange={handleSelectAllChange}
               />
               <label htmlFor="select-all" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
