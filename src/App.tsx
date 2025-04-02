@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Calls from "./pages/Calls";
+import AddClient from "./pages/AddClient";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import ApiEndpoints from "./pages/ApiEndpoints";
@@ -40,6 +41,7 @@ const App = () => (
             
             <Route path="/leads" element={<Leads />} />
             <Route path="/calls" element={<Calls />} />
+            <Route path="/add-client" element={<AddClient />} />
             
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />

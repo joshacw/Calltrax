@@ -1,7 +1,7 @@
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { BarChart3, Phone, Home, LogOut, Settings, Users } from "lucide-react";
+import { BarChart3, Phone, Home, LogOut, Settings, Users, UserPlus } from "lucide-react";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
@@ -79,6 +79,14 @@ const AppSidebar = () => {
                       <a href="/calls">
                         <Phone size={18} />
                         <span>Calls</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <a href="/add-client">
+                        <UserPlus size={18} />
+                        <span>Add Client</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
