@@ -191,13 +191,18 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
         }
       }
       
-      // Use a correct increment method with our improved connection detection
-      const { error: updateLeadError } = await supabase.rpc('increment_call_count', { 
-        lead_id: leadId,
-        is_conversation: isRealConnection,
-        speed_to_lead_value: speedToLead,
-        call_timestamp: payload.timestamp
-      });
+      // Here's where the error is - we need to use a direct update query instead of RPC
+      // since increment_call_count is not available or not matching the expected type
+      const { error: updateLeadError } = await supabase
+        .from('leads')
+        .update({
+          number_of_calls: leadData[0].number_of_calls + 1,
+          number_of_conversations: isRealConnection ? leadData[0].number_of_conversations + 1 : leadData[0].number_of_conversations,
+          connected: leadData[0].connected || isRealConnection,
+          time_of_last_call: payload.timestamp,
+          speed_to_lead: speedToLead || leadData[0].speed_to_lead
+        })
+        .eq('id', leadId);
       
       if (updateLeadError) {
         console.error("Error updating lead:", updateLeadError);
@@ -215,7 +220,8 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
         duration: payload.duration,
         public_share_link: payload.recording_url,
         timestamp: payload.timestamp,
-        disposition: payload.call_outcome || null
+        disposition: payload.call_outcome || null,
+        agent_connected: payload.agent_connected || false
       });
       
     if (callError) {
