@@ -73,7 +73,7 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
           <AreaChart
             data={chartData}
             margin={{
-              top: 10,
+              top: 30, // Increased top margin to prevent "Today" label from being cut off
               right: 30,
               left: 0,
               bottom: 0,
