@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -59,8 +60,10 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
     createCallCenter: { status: "pending", message: "Create call center in Dialpad" },
     createHangupEndpoint: { status: "pending", message: "Create endpoint for hangup events" },
     createDispositionEndpoint: { status: "pending", message: "Create endpoint for disposition events" },
+    createConnectedEndpoint: { status: "pending", message: "Create endpoint for connection events" },
     setupHangupSubscription: { status: "pending", message: "Setup subscription for hangup events" },
     setupDispositionSubscription: { status: "pending", message: "Setup subscription for disposition events" },
+    setupConnectedSubscription: { status: "pending", message: "Setup subscription for connection events" },
     saveClientToDatabase: { status: "pending", message: "Save client information to database" },
     createWebhook: { status: "pending", message: "Create inbound lead webhook" },
   });
@@ -121,8 +124,10 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
             call_center_id: dialpadData.callCenter.id,
             hangup_endpoint_id: dialpadData.hangupEndpoint.id,
             disposition_endpoint_id: dialpadData.dispositionEndpoint.id,
+            connected_endpoint_id: dialpadData.connectedEndpoint.id,
             hangup_subscription_id: dialpadData.hangupSubscription.id,
             disposition_subscription_id: dialpadData.dispositionSubscription.id,
+            connected_subscription_id: dialpadData.connectedSubscription.id,
           },
         });
         
@@ -196,8 +201,10 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         updateStep("createCallCenter", "completed");
         updateStep("createHangupEndpoint", "completed");
         updateStep("createDispositionEndpoint", "completed");
+        updateStep("createConnectedEndpoint", "completed");
         updateStep("setupHangupSubscription", "completed");
         updateStep("setupDispositionSubscription", "completed");
+        updateStep("setupConnectedSubscription", "completed");
         
         // Save client information to database and create webhook
         const { clientId, webhookUrl } = await saveClientToDatabase(data.name, dialpadResult);
