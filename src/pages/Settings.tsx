@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -23,6 +24,31 @@ const SettingsPage = () => {
   const [showCallCenters, setShowCallCenters] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [verificationProgress, setVerificationProgress] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState(() => {
+    return localStorage.getItem("webhookUrl") || `${window.location.origin}/api/webhooks/leads/${Math.random().toString(36).substring(2, 10)}`;
+  });
+  
+  // Initialize KPI settings from localStorage or with defaults
+  const [kpiSettings, setKpiSettings] = useState(() => {
+    const savedSettings = localStorage.getItem("kpiSettings");
+    return savedSettings ? JSON.parse(savedSettings) : {
+      speedToLeadTarget: 5,
+      connectionRateTarget: 60,
+      bookingRateTarget: 25,
+      callsPerLeadTarget: 3
+    };
+  });
+  
+  // Initialize color settings from localStorage or with defaults
+  const [colorSettings, setColorSettings] = useState(() => {
+    const savedColors = localStorage.getItem("colorSettings");
+    return savedColors ? JSON.parse(savedColors) : {
+      good: "#10b981",
+      average: "#f59e0b",
+      poor: "#ef4444"
+    };
+  });
   
   useEffect(() => {
     const checkToken = async () => {
