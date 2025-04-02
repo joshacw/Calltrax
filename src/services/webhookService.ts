@@ -24,6 +24,24 @@ export interface DispositionEventPayload {
   notes?: string;
 }
 
+export interface LeadWebhookPayload {
+  contact: {
+    id?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+  lead: {
+    source?: string;
+    location?: string;
+    timestamp?: string;
+    notes?: string;
+  };
+  agency: {
+    id: string;
+  };
+}
+
 /**
  * Process a hangup event from Dialpad
  * This stores the call data in the database
@@ -61,9 +79,10 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
     let leadId;
     const { data: leadData, error: leadError } = await supabase
       .from('leads')
-      .select('id')
+      .select('id, time_of_notification')
       .eq('agency_id', agencyData.id)
       .eq('contact_number', payload.caller_id)
+      .order('created_at', { ascending: false })
       .limit(1);
       
     if (leadError) {
@@ -100,10 +119,24 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       // Update the existing lead
       leadId = leadData[0].id;
       
-      // Fixed: Use a correct increment method
+      // Calculate speed to lead if this is the first call and we have notification time
+      let speedToLead = null;
+      if (leadData[0].time_of_notification) {
+        const firstCallTime = new Date(payload.timestamp);
+        const notificationTime = new Date(leadData[0].time_of_notification);
+        
+        // Calculate speed to lead in seconds
+        if (!isNaN(firstCallTime.getTime()) && !isNaN(notificationTime.getTime())) {
+          speedToLead = Math.floor((firstCallTime.getTime() - notificationTime.getTime()) / 1000);
+        }
+      }
+      
+      // Use a correct increment method
       const { error: updateLeadError } = await supabase.rpc('increment_call_count', { 
         lead_id: leadId,
-        is_conversation: payload.duration > 10
+        is_conversation: payload.duration > 10,
+        speed_to_lead_value: speedToLead,
+        call_timestamp: payload.timestamp
       });
       
       if (updateLeadError) {
@@ -222,7 +255,7 @@ export const processDispositionEvent = async (payload: DispositionEventPayload):
  * Process an inbound lead webhook
  * This creates a new lead in the database
  */
-export const processLeadWebhook = async (payload: any): Promise<void> => {
+export const processLeadWebhook = async (payload: LeadWebhookPayload): Promise<void> => {
   console.log("Processing lead webhook:", payload);
   
   try {
@@ -243,14 +276,56 @@ export const processLeadWebhook = async (payload: any): Promise<void> => {
       console.error("Error finding agency:", agencyError);
       throw agencyError;
     }
+
+    // Check if a lead with this contact number already exists
+    const contactPhone = payload.contact?.phone || '';
     
-    // Create the lead
+    if (!contactPhone) {
+      throw new Error("Contact phone number is required in webhook payload");
+    }
+    
+    const { data: existingLeads, error: leadCheckError } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('agency_id', agencyId)
+      .eq('contact_number', contactPhone)
+      .limit(1);
+      
+    if (leadCheckError) {
+      console.error("Error checking for existing leads:", leadCheckError);
+      throw leadCheckError;
+    }
+    
+    if (existingLeads && existingLeads.length > 0) {
+      // Update the existing lead instead of creating a new one
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update({
+          contact_id: payload.contact?.id || null,
+          location: payload.lead?.location || 'Unknown',
+          time_of_notification: payload.lead?.timestamp || new Date().toISOString()
+        })
+        .eq('id', existingLeads[0].id);
+        
+      if (updateError) {
+        console.error("Error updating existing lead:", updateError);
+        throw updateError;
+      }
+      
+      toast.success("Lead updated", {
+        description: `Contact: ${payload.contact?.name || contactPhone}`,
+      });
+      
+      return;
+    }
+    
+    // Create the lead if it doesn't exist
     const { error: leadError } = await supabase
       .from('leads')
       .insert({
         agency_id: agencyId,
         contact_id: payload.contact?.id || null,
-        contact_number: payload.contact?.phone || '',
+        contact_number: contactPhone,
         location: payload.lead?.location || 'Unknown',
         time_of_notification: payload.lead?.timestamp || new Date().toISOString(),
         number_of_calls: 0,
