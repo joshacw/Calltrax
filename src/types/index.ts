@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -90,6 +89,7 @@ export interface GraphDataPoint {
   calls: number;
   connections: number;
   appointments: number;
+  leads: number;
 }
 
 export interface FilterOptions {
