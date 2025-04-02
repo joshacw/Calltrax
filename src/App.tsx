@@ -22,6 +22,7 @@ import ClientAccount from "./pages/ClientAccount";
 import GohighlevelIntegration from "./pages/GohighlevelIntegration";
 import SubAccounts from "./pages/SubAccounts";
 import PublicDashboard from "./pages/PublicDashboard";
+import Insights from "./pages/Insights";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,12 @@ const App = () => (
             <Route path="/add-client" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AddClient />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/insights" element={
+              <ProtectedRoute>
+                <Insights />
               </ProtectedRoute>
             } />
             

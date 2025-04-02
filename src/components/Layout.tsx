@@ -99,9 +99,9 @@ const AppSidebar = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/reports">
+                      <a href="/insights">
                         <BarChart3 size={18} />
-                        <span>Reports</span>
+                        <span>Insights</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -136,9 +136,9 @@ const AppSidebar = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/reports">
+                      <a href="/insights">
                         <BarChart3 size={18} />
-                        <span>Reports</span>
+                        <span>Insights</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
