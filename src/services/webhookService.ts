@@ -151,7 +151,7 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       .insert({
         lead_id: leadId,
         contact_number: payload.caller_id,
-        direction: payload.call_direction,
+        direction: payload.call_direction as "inbound" | "outbound", // Fix the type here
         duration: payload.duration,
         public_share_link: payload.recording_url,
         timestamp: payload.timestamp
