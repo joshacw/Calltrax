@@ -202,10 +202,9 @@ const SettingsPage = () => {
                 </div>
                 
                 {dialpadTokenValid !== null && (
-                  <div className="mt-4 p-4 rounded-md border" 
-                       className={dialpadTokenValid 
-                         ? "bg-green-50 border-green-200" 
-                         : "bg-red-50 border-red-200"}>
+                  <div className={`mt-4 p-4 rounded-md border ${
+                    dialpadTokenValid ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+                  }`}>
                     <h3 className="text-sm font-medium mb-2">
                       {dialpadTokenValid 
                         ? "Dialpad API Token Valid" 
