@@ -2,6 +2,7 @@
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Layout } from "@/components/Layout";
 import { MetricCard, StatCard } from "@/components/MetricCard";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import { getDashboardMetrics } from "@/services/mockData";
 import { FilterOptions } from "@/types";
 import { useState } from "react";
@@ -27,6 +28,8 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold mb-6">Performance Dashboard</h1>
         
         <DashboardFilter onFilterChange={handleFilterChange} />
+        
+        <InsightsPanel />
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard 
