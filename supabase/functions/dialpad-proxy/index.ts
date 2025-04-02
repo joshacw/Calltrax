@@ -57,13 +57,16 @@ serve(async (req) => {
     const targetUrl = `${DIALPAD_API_BASE_URL}${endpoint}`;
     if (debug) console.log(`Making ${method || "GET"} request to Dialpad API: ${targetUrl}`);
 
+    // Create headers with Authorization
+    const headers = new Headers({
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    });
+
     const options = {
       method: method || "GET",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
+      headers,
     };
 
     if (requestBody && (method === "POST" || method === "PUT" || method === "PATCH")) {
@@ -81,7 +84,7 @@ serve(async (req) => {
         console.log("Sending request to Dialpad with options:", {
           method: options.method,
           url: targetUrl,
-          headers: { ...options.headers, Authorization: "Bearer [REDACTED]" },
+          headers: Object.fromEntries([...headers.entries()].filter(key => key[0].toLowerCase() !== "authorization")),
           body: options.body ? JSON.parse(options.body) : undefined
         });
       }
