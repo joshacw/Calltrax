@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -72,14 +73,61 @@ export interface DashboardMetrics {
   numberOfCalls: number;
   numberOfConversations: number;
   numberOfAppointments: number;
+  performanceKPIs?: PerformanceKPIs;
+  averageCallDuration?: number;
+  graphData?: GraphDataPoint[];
+}
+
+export interface PerformanceKPIs {
+  speedToLeadTarget: number;
+  connectionRateTarget: number;
+  bookingRateTarget: number;
+  callsPerLeadTarget: number;
+}
+
+export interface GraphDataPoint {
+  date: string;
+  calls: number;
+  connections: number;
+  appointments: number;
 }
 
 export interface FilterOptions {
   agencies: string[];
   locations: string[];
   teamMembers: string[];
+  dispositions?: string[];
   dateRange: {
     start: string;
     end: string;
   };
+}
+
+export interface DialpadSettings {
+  apiToken: string;
+  webhookUrl: string;
+  colorGrading: {
+    good: string;
+    average: string;
+    poor: string;
+  };
+  kpiTargets: {
+    speedToLead: number;
+    connectionRate: number;
+    bookingRate: number;
+    callsPerLead: number;
+  };
+}
+
+export type HealthStatus = 'healthy' | 'warning' | 'critical';
+
+export interface AccountHealth {
+  status: HealthStatus;
+  metrics: {
+    speedToLead: HealthStatus;
+    connectionRate: HealthStatus;
+    bookingRate: HealthStatus;
+    callsPerLead: HealthStatus;
+  };
+  recommendations: string[];
 }

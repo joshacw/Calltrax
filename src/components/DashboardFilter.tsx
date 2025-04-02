@@ -2,10 +2,12 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FilterOptions } from "@/types";
-import { getAgenciesByClientId, getLocationsByClientId, getTeamMembers } from "@/services/mockData";
+import { getAgenciesByClientId, getLocationsByClientId, getTeamMembers, getDispositions } from "@/services/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { CalendarRange, Filter, MapPin, Users } from "lucide-react";
+import { CalendarRange, Filter, MapPin, Users, CheckSquare } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface DashboardFilterProps {
   onFilterChange: (filters: FilterOptions) => void;
@@ -16,10 +18,13 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
   const [agencies, setAgencies] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
+  const [dispositions, setDispositions] = useState<string[]>([]);
   
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<string[]>([]);
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
+  const [showAppointmentOnly, setShowAppointmentOnly] = useState<boolean>(false);
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     end: new Date().toISOString(),
@@ -27,29 +32,38 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
 
   useEffect(() => {
     // Load available filter options
-    if (user && user.clientId) {
-      const clientAgencies = getAgenciesByClientId(user.clientId);
-      setAgencies(clientAgencies.map(a => ({ id: a.id, name: a.name })));
+    if (user) {
+      if (user.clientId) {
+        const clientAgencies = getAgenciesByClientId(user.clientId);
+        setAgencies(clientAgencies.map(a => ({ id: a.id, name: a.name })));
+        
+        const clientLocations = getLocationsByClientId(user.clientId);
+        setLocations(clientLocations);
+      } else if (user.role === 'admin') {
+        // Admin can see all agencies and locations
+        setAgencies([
+          { id: "1", name: "ABC North" },
+          { id: "2", name: "ABC South" },
+          { id: "3", name: "XYZ West" },
+          { id: "4", name: "XYZ East" },
+        ]);
+        
+        setLocations([
+          "New York", "Boston", "Miami", "Atlanta", 
+          "Los Angeles", "San Francisco", "Chicago", "Philadelphia"
+        ]);
+      } else if (user.role === 'agency' && user.agencyId) {
+        // Agency users can only see their own locations
+        const agency = getAgenciesByClientId(user.agencyId)[0];
+        if (agency) {
+          setLocations(agency.locations);
+        }
+      }
       
-      const clientLocations = getLocationsByClientId(user.clientId);
-      setLocations(clientLocations);
-    } else {
-      // Admin can see all agencies and locations
-      // In a real app, this would load from a service
-      setAgencies([
-        { id: "1", name: "ABC North" },
-        { id: "2", name: "ABC South" },
-        { id: "3", name: "XYZ West" },
-        { id: "4", name: "XYZ East" },
-      ]);
-      
-      setLocations([
-        "New York", "Boston", "Miami", "Atlanta", 
-        "Los Angeles", "San Francisco", "Chicago", "Philadelphia"
-      ]);
+      // Load team members and dispositions
+      setTeamMembers(getTeamMembers());
+      setDispositions(getDispositions());
     }
-    
-    setTeamMembers(getTeamMembers());
   }, [user]);
 
   useEffect(() => {
@@ -59,8 +73,19 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
       locations: selectedLocations,
       teamMembers: selectedTeamMembers,
       dateRange,
+      dispositions: showAppointmentOnly 
+        ? ["Appointment Booked", "Appointment Scheduled", "Set Appointment"] 
+        : selectedDispositions,
     });
-  }, [selectedAgencies, selectedLocations, selectedTeamMembers, dateRange, onFilterChange]);
+  }, [
+    selectedAgencies, 
+    selectedLocations, 
+    selectedTeamMembers, 
+    selectedDispositions,
+    showAppointmentOnly,
+    dateRange, 
+    onFilterChange
+  ]);
 
   const handleDateRangeChange = (days: number) => {
     const end = new Date();
@@ -83,40 +108,90 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
         <div className="font-medium">Filters</div>
       </div>
       
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        {/* Show agency filter only for admin users */}
         {user?.role === "admin" && (
-          <Button 
-            variant="outline" 
-            className={allAgencies ? "bg-secondary" : ""}
-            onClick={() => setSelectedAgencies([])}
-            size="sm"
-          >
-            <Users className="mr-2 h-4 w-4" />
-            All Agencies
-          </Button>
+          <div>
+            <Label className="mb-1 block">Agency</Label>
+            <Select
+              onValueChange={(value) => setSelectedAgencies(value ? [value] : [])}
+              defaultValue="">
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Agencies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Agencies</SelectItem>
+                {agencies.map((agency) => (
+                  <SelectItem key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
         
-        <Button 
-          variant="outline" 
-          className={allLocations ? "bg-secondary" : ""}
-          onClick={() => setSelectedLocations([])}
-          size="sm"
-        >
-          <MapPin className="mr-2 h-4 w-4" />
-          All Locations
-        </Button>
+        {/* Location filter for all user types */}
+        <div>
+          <Label className="mb-1 block">Location</Label>
+          <Select
+            onValueChange={(value) => setSelectedLocations(value ? [value] : [])}
+            defaultValue="">
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All Locations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Locations</SelectItem>
+              {locations.map((location) => (
+                <SelectItem key={location} value={location}>
+                  {location}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         
+        {/* Team Member filter for admin only */}
         {user?.role === "admin" && (
-          <Button 
-            variant="outline" 
-            className={allTeamMembers ? "bg-secondary" : ""}
-            onClick={() => setSelectedTeamMembers([])}
-            size="sm"
-          >
-            <Users className="mr-2 h-4 w-4" />
-            All Team Members
-          </Button>
+          <div>
+            <Label className="mb-1 block">Team Member</Label>
+            <Select
+              onValueChange={(value) => setSelectedTeamMembers(value ? [value] : [])}
+              defaultValue="">
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Team Members" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Team Members</SelectItem>
+                {teamMembers.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
+      </div>
+      
+      {/* Disposition filter for all user types */}
+      <div className="mb-4">
+        <div className="flex items-center space-x-2 mb-2">
+          <Checkbox 
+            id="appointment-filter" 
+            checked={showAppointmentOnly} 
+            onCheckedChange={(checked) => setShowAppointmentOnly(checked === true)}
+          />
+          <Label htmlFor="appointment-filter" className="font-medium cursor-pointer">
+            <span className="flex items-center">
+              <CheckSquare className="w-4 h-4 mr-1 text-brand-blue" />
+              Show only appointments
+            </span>
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground ml-6">
+          Filter results to show only calls with "Appointment" in the disposition
+        </p>
       </div>
       
       <div className="flex flex-wrap gap-2">

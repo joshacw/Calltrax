@@ -21,6 +21,7 @@ import EmailReports from "./pages/EmailReports";
 import ClientAccount from "./pages/ClientAccount";
 import GohighlevelIntegration from "./pages/GohighlevelIntegration";
 import SubAccounts from "./pages/SubAccounts";
+import PublicDashboard from "./pages/PublicDashboard";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            
+            <Route path="/dashboard/public/:dashboardId" element={<PublicDashboard />} />
             
             <Route path="/leads" element={
               <ProtectedRoute allowedRoles={["admin"]}>
