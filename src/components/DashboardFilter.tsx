@@ -115,12 +115,12 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
             <Label className="mb-1 block">Agency</Label>
             <Select
               onValueChange={(value) => setSelectedAgencies(value ? [value] : [])}
-              defaultValue="">
+              defaultValue="all">
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="All Agencies" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Agencies</SelectItem>
+                <SelectItem value="all">All Agencies</SelectItem>
                 {agencies.map((agency) => (
                   <SelectItem key={agency.id} value={agency.id}>
                     {agency.name}
@@ -136,12 +136,12 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
           <Label className="mb-1 block">Location</Label>
           <Select
             onValueChange={(value) => setSelectedLocations(value ? [value] : [])}
-            defaultValue="">
+            defaultValue="all">
             <SelectTrigger className="w-full">
               <SelectValue placeholder="All Locations" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Locations</SelectItem>
+              <SelectItem value="all">All Locations</SelectItem>
               {locations.map((location) => (
                 <SelectItem key={location} value={location}>
                   {location}
@@ -157,12 +157,12 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
             <Label className="mb-1 block">Team Member</Label>
             <Select
               onValueChange={(value) => setSelectedTeamMembers(value ? [value] : [])}
-              defaultValue="">
+              defaultValue="all">
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="All Team Members" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Team Members</SelectItem>
+                <SelectItem value="all">All Team Members</SelectItem>
                 {teamMembers.map((member) => (
                   <SelectItem key={member.id} value={member.id}>
                     {member.name}
