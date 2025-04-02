@@ -41,10 +41,23 @@ export interface DialpadSubscription {
   created_at: string;
 }
 
-// Base URL for the proxy endpoint
-const PROXY_URL = import.meta.env.PROD 
-  ? `${window.location.origin}/functions/v1/dialpad-proxy`
-  : "http://localhost:54321/functions/v1/dialpad-proxy";
+// Get the proper base URL for the proxy endpoint based on the environment
+const getProxyUrl = () => {
+  if (import.meta.env.PROD) {
+    // In production, use the current origin
+    return `${window.location.origin}/functions/v1/dialpad-proxy`;
+  } else {
+    // For local development
+    // If running with Supabase local dev server
+    const localSupabaseUrl = 'http://localhost:54321/functions/v1/dialpad-proxy';
+    
+    // Check if we can use the local Supabase URL by making a test request
+    return localSupabaseUrl;
+  }
+};
+
+// Base URL for the proxy endpoint - dynamic based on environment
+const PROXY_URL = getProxyUrl();
 
 // Get the Dialpad API token from localStorage
 const getDialpadApiToken = (): string => {
@@ -64,9 +77,9 @@ const dialpadRequest = async <T>(
   }
   
   try {
-    console.log(`Making ${method} request to Dialpad API: ${endpoint}`);
+    console.log(`Making ${method} request to Dialpad API: ${endpoint} through proxy: ${PROXY_URL}`);
     
-    const response = await fetch(`${PROXY_URL}?debug=true`, {
+    const requestOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -78,16 +91,44 @@ const dialpadRequest = async <T>(
         token: apiToken,
         body,
       }),
+    };
+    
+    console.log("Request options:", { 
+      ...requestOptions, 
+      body: JSON.parse(requestOptions.body),
+      bodyWithRedactedToken: {
+        ...JSON.parse(requestOptions.body),
+        token: apiToken ? "[REDACTED]" : undefined
+      }
+    });
+    
+    // Use an AbortController to handle timeouts
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+    
+    const fetchOptions = {
+      ...requestOptions,
+      signal: controller.signal,
+    };
+    
+    const response = await fetch(`${PROXY_URL}?debug=true`, fetchOptions);
+    clearTimeout(timeoutId);
+    
+    console.log("Response from proxy:", { 
+      status: response.status, 
+      statusText: response.statusText,
+      headers: Object.fromEntries([...response.headers.entries()])
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
       const errorMessage = errorData.error || response.statusText;
       console.error(`Dialpad API error (${response.status}): ${errorMessage}`, errorData);
       throw new Error(`Dialpad API error (${response.status}): ${errorMessage}`);
     }
     
     const result = await response.json();
+    console.log("Response parsed:", result);
     
     // If the proxied request had an error status, throw it
     if (result.status >= 400) {
@@ -98,6 +139,11 @@ const dialpadRequest = async <T>(
     return result.data as T;
   } catch (error) {
     console.error("Dialpad API request error:", error);
+    
+    // Handle AbortController timeouts
+    if (error.name === "AbortError") {
+      throw new Error("Request to Dialpad API timed out after 20 seconds. Please try again later.");
+    }
     
     if (retries > 0 && (error instanceof TypeError || (error.message && (error.message.includes("network") || error.message.includes("fetch"))))) {
       // Network errors retry with exponential backoff
@@ -278,51 +324,122 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       return false;
     }
     
-    // Use our proxy endpoint to test the connection with a simple endpoint
-    const response = await fetch(`${PROXY_URL}?debug=true`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        method: "GET",
-        endpoint: "/channels?limit=1",
-        token: token
-      }),
-    });
+    // Add more detailed logging for debugging
+    console.log("Using proxy URL:", PROXY_URL);
     
-    // Check if we got a response at all
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Proxy error response:", errorText);
-      return false;
-    }
+    // Use a simple retry mechanism for the test connection
+    let attemptCount = 0;
+    const maxAttempts = 2;
     
-    // Parse the response
-    const result = await response.json();
-    console.log("Dialpad test connection response:", result.status, result.statusText);
-    
-    // If the proxied request returns 401, the token is invalid
-    if (result.status === 401) {
-      console.error("Invalid Dialpad API token (401 Unauthorized)");
-      return false;
-    }
-    
-    // Check for non-JSON responses which might indicate an issue
-    if (result.data && result.data._nonJson) {
-      console.error("Received non-JSON response from Dialpad API:", result.data.text);
-      console.error("Content type:", result.data.contentType);
-      // Check if this looks like a rate limiting or temporary issue
-      if (result.data.text.includes("rate limit") || 
-          result.data.text.includes("too many requests") ||
-          result.status === 429) {
-        console.warn("Dialpad API rate limiting detected. Try again later.");
+    while (attemptCount < maxAttempts) {
+      attemptCount++;
+      console.log(`Connection test attempt ${attemptCount}/${maxAttempts}`);
+      
+      try {
+        // Use our proxy endpoint to test the connection with a simple endpoint
+        const requestOptions = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          body: JSON.stringify({
+            method: "GET",
+            endpoint: "/channels?limit=1",
+            token: token
+          }),
+        };
+        
+        console.log("Test connection request options:", {
+          ...requestOptions,
+          body: {
+            ...JSON.parse(requestOptions.body),
+            token: "[REDACTED]"
+          }
+        });
+        
+        // Add timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        const response = await fetch(`${PROXY_URL}?debug=true`, {
+          ...requestOptions,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Check if we got a response at all
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Proxy error response:", errorText);
+          
+          // If we got a 500+ error from our own proxy, it might be a temporary issue
+          if (response.status >= 500) {
+            throw new Error(`Temporary server error: ${response.status} ${response.statusText}`);
+          }
+          
+          return false;
+        }
+        
+        // Parse the response
+        const result = await response.json();
+        console.log("Dialpad test connection response:", result.status, result.statusText, result);
+        
+        // If the proxied request returns 401, the token is invalid
+        if (result.status === 401) {
+          console.error("Invalid Dialpad API token (401 Unauthorized)");
+          return false;
+        }
+        
+        // Check for non-JSON responses which might indicate an issue
+        if (result.data && result.data._nonJson) {
+          console.error("Received non-JSON response from Dialpad API:", result.data.text);
+          console.error("Content type:", result.data.contentType);
+          
+          // Check if this looks like a rate limiting or temporary issue
+          if (result.data.text.includes("rate limit") || 
+              result.data.text.includes("too many requests") ||
+              result.status === 429) {
+            console.warn("Dialpad API rate limiting detected. Try again later.");
+            throw new Error("Rate limiting detected. Retrying...");
+          }
+          
+          return false;
+        }
+        
+        // If we get here, the test was successful
+        return result.status >= 200 && result.status < 300;
+      } catch (error) {
+        console.error(`Connection test attempt ${attemptCount} failed:`, error);
+        
+        // For AbortController timeout errors
+        if (error.name === "AbortError") {
+          console.warn("Connection test timed out");
+          // If this is not our last attempt, retry
+          if (attemptCount < maxAttempts) {
+            console.log("Retrying after timeout...");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+        }
+        
+        // Only retry if it's a network error and not the last attempt
+        if (error instanceof TypeError && error.message.includes("fetch") && attemptCount < maxAttempts) {
+          console.log("Network error, retrying in 2 seconds...");
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        
+        // If we've tried all attempts or it's not a retryable error, return false
+        if (attemptCount >= maxAttempts) {
+          console.error("All connection test attempts failed");
+          return false;
+        }
       }
-      return false;
     }
     
-    return result.status >= 200 && result.status < 300;
+    return false;
   } catch (error) {
     console.error("Failed to test Dialpad connection:", error);
     // For network errors to our proxy, consider it a temporary issue, not a token issue
