@@ -53,7 +53,7 @@ serve(async (req) => {
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        "Accept": "application/json", // Explicitly set Accept header to application/json
       },
     };
 

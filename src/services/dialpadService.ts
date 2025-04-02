@@ -70,6 +70,7 @@ const dialpadRequest = async <T>(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify({
         method,
@@ -282,6 +283,7 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify({
         method: "GET",
