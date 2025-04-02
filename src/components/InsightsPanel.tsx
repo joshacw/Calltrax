@@ -2,9 +2,11 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingDown, TrendingUp, AlertTriangle, Award, BarChart3, CalendarRange } from "lucide-react";
+import { TrendingDown, TrendingUp, AlertTriangle, Award, BarChart3, CalendarRange, ChevronRight } from "lucide-react";
 import { getDashboardMetrics } from "@/services/mockData";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface InsightItem {
   type: "warning" | "success" | "info";
@@ -18,6 +20,9 @@ interface InsightItem {
 export const InsightsPanel = () => {
   const { user } = useAuth();
   const [insights, setInsights] = useState<InsightItem[]>([]);
+  const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
+  const [showAllInsights, setShowAllInsights] = useState(false);
+  const [animationState, setAnimationState] = useState<"fade-in" | "fade-out" | "visible">("visible");
   
   useEffect(() => {
     // In a real app, these insights would be calculated from real data
@@ -104,79 +109,169 @@ export const InsightsPanel = () => {
     setInsights(generatedInsights);
   }, []);
   
+  // Effect to handle the rotation of insights
+  useEffect(() => {
+    if (showAllInsights || insights.length === 0) return;
+    
+    const rotateInsight = () => {
+      // Start fade out animation
+      setAnimationState("fade-out");
+      
+      // After fade out completes, change insight and fade in
+      const fadeOutTimer = setTimeout(() => {
+        setCurrentInsightIndex((prevIndex) => (prevIndex + 1) % insights.length);
+        setAnimationState("fade-in");
+        
+        // After fade in completes, set to visible
+        const fadeInTimer = setTimeout(() => {
+          setAnimationState("visible");
+        }, 300); // Duration of fade in animation
+        
+        return () => clearTimeout(fadeInTimer);
+      }, 300); // Duration of fade out animation
+      
+      return () => clearTimeout(fadeOutTimer);
+    };
+    
+    // Set the interval for rotating insights (12 seconds)
+    const intervalId = setInterval(rotateInsight, 12000);
+    
+    // Initial fade in
+    setAnimationState("fade-in");
+    const initialFadeInTimer = setTimeout(() => {
+      setAnimationState("visible");
+    }, 300);
+    
+    // Clean up
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(initialFadeInTimer);
+    };
+  }, [showAllInsights, insights.length]);
+  
   // Only admins should see the insights panel
   if (user?.role !== "admin") {
     return null;
   }
   
+  // If no insights, don't render anything
+  if (insights.length === 0) {
+    return null;
+  }
+  
+  // Animation classes
+  const getAnimationClass = () => {
+    switch (animationState) {
+      case "fade-in":
+        return "opacity-0 translate-y-2 animate-in";
+      case "fade-out":
+        return "opacity-100 translate-y-0 animate-out";
+      case "visible":
+        return "opacity-100 translate-y-0";
+      default:
+        return "";
+    }
+  };
+  
   return (
     <Card className="mb-8">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-brand-blue" />
-          Performance Insights
-        </CardTitle>
-        <CardDescription>
-          AI-powered analysis of your call center performance metrics
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-brand-blue" />
+            Performance Insights
+          </CardTitle>
+          <CardDescription>
+            AI-powered analysis of your call center performance metrics
+          </CardDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowAllInsights(!showAllInsights)}
+          className="flex items-center gap-1"
+        >
+          {showAllInsights ? "Show Rotating" : "View All"}
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
-          {insights.map((insight, index) => (
-            <div key={index} className="flex items-start gap-3 p-3 rounded-md bg-muted/50">
-              {insight.type === "warning" && (
-                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+          {showAllInsights ? (
+            // Show all insights
+            insights.map((insight, index) => (
+              <InsightItem key={index} insight={insight} />
+            ))
+          ) : (
+            // Show only current insight with animation
+            <div 
+              className={cn(
+                "transition-all duration-300 ease-out",
+                getAnimationClass()
               )}
-              {insight.type === "success" && (
-                <TrendingUp className="h-5 w-5 text-emerald-500 mt-0.5" />
-              )}
-              {insight.type === "info" && (
-                <TrendingDown className="h-5 w-5 text-blue-500 mt-0.5" />
-              )}
-              <div className="flex-1">
-                <div className="font-medium mb-1 flex items-center gap-2">
-                  {insight.title}
-                  <Badge variant={
-                    insight.type === "warning" ? "destructive" : 
-                    insight.type === "success" ? "default" : "secondary"
-                  }>
-                    {insight.type === "warning" ? "Needs Attention" : 
-                     insight.type === "success" ? "Outstanding" : "Improving"}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{insight.description}</p>
-                {(insight.source || insight.metric) && (
-                  <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                    {insight.source && (
-                      <span className="flex items-center">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {insight.source}
-                      </span>
-                    )}
-                    {insight.metric && (
-                      <span className="flex items-center">
-                        <Award className="h-3 w-3 mr-1" />
-                        {insight.metric}
-                      </span>
-                    )}
-                    {insight.change !== undefined && (
-                      <span className={`flex items-center ${insight.change > 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                        {insight.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                        {insight.change > 0 ? '+' : ''}{insight.change.toFixed(1)}%
-                      </span>
-                    )}
-                    <span className="flex items-center">
-                      <CalendarRange className="h-3 w-3 mr-1" />
-                      Last 7 days
-                    </span>
-                  </div>
-                )}
-              </div>
+            >
+              {insights.length > 0 && <InsightItem insight={insights[currentInsightIndex]} />}
             </div>
-          ))}
+          )}
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+// Extracted InsightItem component for better organization
+const InsightItem = ({ insight }: { insight: InsightItem }) => {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-md bg-muted/50">
+      {insight.type === "warning" && (
+        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+      )}
+      {insight.type === "success" && (
+        <TrendingUp className="h-5 w-5 text-emerald-500 mt-0.5" />
+      )}
+      {insight.type === "info" && (
+        <TrendingDown className="h-5 w-5 text-blue-500 mt-0.5" />
+      )}
+      <div className="flex-1">
+        <div className="font-medium mb-1 flex items-center gap-2">
+          {insight.title}
+          <Badge variant={
+            insight.type === "warning" ? "destructive" : 
+            insight.type === "success" ? "default" : "secondary"
+          }>
+            {insight.type === "warning" ? "Needs Attention" : 
+             insight.type === "success" ? "Outstanding" : "Improving"}
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">{insight.description}</p>
+        {(insight.source || insight.metric) && (
+          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+            {insight.source && (
+              <span className="flex items-center">
+                <MapPin className="h-3 w-3 mr-1" />
+                {insight.source}
+              </span>
+            )}
+            {insight.metric && (
+              <span className="flex items-center">
+                <Award className="h-3 w-3 mr-1" />
+                {insight.metric}
+              </span>
+            )}
+            {insight.change !== undefined && (
+              <span className={`flex items-center ${insight.change > 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                {insight.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                {insight.change > 0 ? '+' : ''}{insight.change.toFixed(1)}%
+              </span>
+            )}
+            <span className="flex items-center">
+              <CalendarRange className="h-3 w-3 mr-1" />
+              Last 7 days
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
