@@ -1,16 +1,19 @@
-
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'client';
+  role: 'admin' | 'client' | 'agency';
   clientId?: string;
+  agencyId?: string;
 }
 
 export interface Client {
   id: string;
   name: string;
   agencies: Agency[];
+  gohighlevelApiKey?: string;
+  gohighlevelLocationId?: string;
+  gohighlevelIntegrated: boolean;
 }
 
 export interface Agency {
@@ -18,6 +21,18 @@ export interface Agency {
   name: string;
   clientId: string;
   locations: string[];
+  subAccounts: SubAccount[];
+}
+
+export interface SubAccount {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  agencyId: string;
+  locationId: string;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface Lead {

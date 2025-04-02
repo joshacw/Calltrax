@@ -19,6 +19,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import TeamMembers from "./pages/TeamMembers";
 import EmailReports from "./pages/EmailReports";
 import ClientAccount from "./pages/ClientAccount";
+import GohighlevelIntegration from "./pages/GohighlevelIntegration";
+import SubAccounts from "./pages/SubAccounts";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +84,18 @@ const App = () => (
             <Route path="/account" element={
               <ProtectedRoute allowedRoles={["client"]}>
                 <ClientAccount />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/gohighlevel-integration" element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <GohighlevelIntegration />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/subaccounts" element={
+              <ProtectedRoute allowedRoles={["agency"]}>
+                <SubAccounts />
               </ProtectedRoute>
             } />
             

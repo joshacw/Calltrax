@@ -4,10 +4,10 @@ import { Navigate, useLocation } from "react-router-dom";
 
 export const ProtectedRoute = ({ 
   children,
-  allowedRoles = ["admin", "client"]
+  allowedRoles = ["admin", "client", "agency"]
 }: { 
   children: React.ReactNode;
-  allowedRoles?: ("admin" | "client")[];
+  allowedRoles?: ("admin" | "client" | "agency")[];
 }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
