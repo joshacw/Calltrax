@@ -226,18 +226,63 @@ export const getDashboardMetrics = (
   teamMemberFilter?: string[]
 ): DashboardMetrics => {
   // In a real app, you would filter the data based on the provided filters
-  // For now, we'll return static data
+  // For now, we'll return updated metrics that align with our chart data
   
   return {
     averageSpeedToLead: 4.8,
-    connectionRate: 54,
-    bookingRate: 38,
+    connectionRate: 55, // 22/40 * 100 = ~55%
+    bookingRate: 41,    // 9/22 * 100 = ~41%
     teamPerformance: "On Target",
-    numberOfLeads: 100,
-    numberOfCalls: 165,
-    numberOfConversations: 90,
-    numberOfAppointments: 35,
+    numberOfLeads: 125, // 25 * 5 days = 125
+    numberOfCalls: 200, // 40 * 5 days = 200
+    numberOfConversations: 110, // 22 * 5 days = 110
+    numberOfAppointments: 45,  // 9 * 5 days = 45
+    graphData: getWeekToDateData()
   };
+};
+
+// Helper function to get week-to-date data for the dashboard
+const getWeekToDateData = (): GraphDataPoint[] => {
+  const data: GraphDataPoint[] = [];
+  const today = new Date();
+  const startOfCurrentWeek = new Date(today);
+  startOfCurrentWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Start on Monday
+  
+  // Daily benchmarks
+  const dailyBenchmarks = {
+    leads: 25,
+    calls: 40,
+    connections: 22,
+    appointments: 9
+  };
+
+  // Slight variations for different days
+  const dailyVariations = [
+    { leads: 0.9, calls: 0.85, connections: 0.8, appointments: 0.75 },   // Monday
+    { leads: 1.1, calls: 1.05, connections: 1.1, appointments: 0.9 },    // Tuesday
+    { leads: 1.0, calls: 1.15, connections: 1.05, appointments: 1.2 },   // Wednesday
+    { leads: 0.95, calls: 1.0, connections: 0.95, appointments: 1.1 },   // Thursday
+    { leads: 0.85, calls: 0.9, connections: 0.85, appointments: 0.85 }   // Friday
+  ];
+  
+  // Generate data for each weekday (Mon-Fri)
+  for (let i = 0; i < 5; i++) {
+    const currentDate = new Date(startOfCurrentWeek);
+    currentDate.setDate(startOfCurrentWeek.getDate() + i);
+    const variation = dailyVariations[i];
+    
+    const dayData: GraphDataPoint = {
+      date: currentDate.toISOString().split('T')[0],
+      leads: Math.round(dailyBenchmarks.leads * variation.leads),
+      calls: Math.round(dailyBenchmarks.calls * variation.calls),
+      connections: Math.round(dailyBenchmarks.connections * variation.connections),
+      appointments: Math.round(dailyBenchmarks.appointments * variation.appointments)
+    };
+    
+    data.push(dayData);
+  }
+  
+  return data;
 };
 
 // Get filtered leads

@@ -76,7 +76,7 @@ const Dashboard = () => {
         
         {/* Performance Chart - moved above metrics */}
         <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Performance Trends</h2>
+          <h2 className="text-lg font-semibold mb-4">Week To Date Performance Trends</h2>
           <PerformanceChart data={metrics.graphData || []} />
         </div>
         
