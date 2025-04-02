@@ -1,11 +1,10 @@
-
 import { Resend } from 'resend';
 import { DashboardMetrics, FilterOptions } from '@/types';
 import { getDashboardMetrics } from './mockData';
 
 // Initialize Resend with API key from localStorage
-const getResendApiKey = (): string => {
-  return localStorage.getItem("resendApiKey") || "";
+const getResendApiKey = (): string | null => {
+  return localStorage.getItem('resendApiKey');
 };
 
 // Initialize Resend with API key

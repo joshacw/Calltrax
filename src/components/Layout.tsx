@@ -14,7 +14,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           <header className="h-16 px-6 border-b flex items-center justify-between">
             <div className="flex items-center">
               <SidebarTrigger />
-              <h1 className="text-xl font-semibold ml-4">CallTrax Dashboard</h1>
+              <h1 className="text-xl font-semibold ml-4">Lead Activators Dashboard</h1>
             </div>
             <div className="flex items-center gap-4">
               {user && (
@@ -48,7 +48,7 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="text-xl font-bold p-4">CallTrax</div>
+        <div className="text-xl font-bold p-4">Lead Activators</div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -152,7 +152,7 @@ const AppSidebar = () => {
       </SidebarContent>
       <SidebarFooter>
         <div className="p-4 text-xs text-muted-foreground">
-          &copy; CallTrax {new Date().getFullYear()}
+          &copy; Lead Activators {new Date().getFullYear()}
         </div>
       </SidebarFooter>
     </Sidebar>

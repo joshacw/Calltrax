@@ -8,7 +8,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
       <div className="text-center max-w-3xl px-4">
-        <h1 className="text-5xl font-bold mb-6">CallTrax Dashboard</h1>
+        <h1 className="text-5xl font-bold mb-6">Lead Activators Dashboard</h1>
         <p className="text-xl text-gray-600 mb-8">
           Track call center performance, analyze leads, and measure agent productivity
           with our comprehensive dashboard solution.
