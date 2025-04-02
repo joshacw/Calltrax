@@ -53,6 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      // Using explicit type assertion to fix the TypeScript error
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -62,11 +63,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
 
       if (data) {
+        // Using explicit typing to handle the profile data
         setUser({
           id: userId,
           email: session?.user?.email || '',
           name: data.name || session?.user?.email?.split('@')[0] || 'User',
-          role: data.role as 'admin' | 'client' | 'agency',
+          role: (data.role as 'admin' | 'client' | 'agency') || 'client',
           clientId: data.client_id || undefined,
           agencyId: data.agency_id || undefined
         });
