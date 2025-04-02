@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,6 +11,8 @@ export interface HangupEventPayload {
   call_direction: "inbound" | "outbound";
   duration: number;
   recording_url?: string;
+  call_outcome?: "answered" | "voicemail" | "missed" | "declined";
+  agent_connected?: boolean;
 }
 
 export interface DispositionEventPayload {
@@ -90,6 +91,11 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       throw leadError;
     }
     
+    // Determine if this was a real connection based on call outcome or agent connection
+    const isRealConnection = 
+      (payload.call_outcome === "answered" && payload.duration > 10) || 
+      (payload.agent_connected === true);
+    
     if (leadData.length === 0) {
       // Create a new lead if none exists
       const { data: newLead, error: newLeadError } = await supabase
@@ -102,8 +108,8 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
           time_of_first_call: payload.timestamp,
           time_of_last_call: payload.timestamp,
           number_of_calls: 1,
-          number_of_conversations: payload.duration > 10 ? 1 : 0,
-          connected: payload.duration > 10,
+          number_of_conversations: isRealConnection ? 1 : 0,
+          connected: isRealConnection,
           appointment_booked: false
         })
         .select('id')
@@ -120,7 +126,7 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       leadId = leadData[0].id;
       
       // Calculate speed to lead if this is the first call and we have notification time
-      let speedToLead = null;
+      let speedToLead;
       if (leadData[0].time_of_notification) {
         const firstCallTime = new Date(payload.timestamp);
         const notificationTime = new Date(leadData[0].time_of_notification);
@@ -131,10 +137,10 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
         }
       }
       
-      // Use a correct increment method
+      // Use a correct increment method with our improved connection detection
       const { error: updateLeadError } = await supabase.rpc('increment_call_count', { 
         lead_id: leadId,
-        is_conversation: payload.duration > 10,
+        is_conversation: isRealConnection,
         speed_to_lead_value: speedToLead,
         call_timestamp: payload.timestamp
       });
@@ -151,10 +157,11 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       .insert({
         lead_id: leadId,
         contact_number: payload.caller_id,
-        direction: payload.call_direction as "inbound" | "outbound", // Fix the type here
+        direction: payload.call_direction as "inbound" | "outbound",
         duration: payload.duration,
         public_share_link: payload.recording_url,
-        timestamp: payload.timestamp
+        timestamp: payload.timestamp,
+        disposition: payload.call_outcome || null
       });
       
     if (callError) {
