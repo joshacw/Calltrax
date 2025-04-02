@@ -10,9 +10,9 @@ const Index = () => {
       <div className="text-center max-w-3xl px-4">
         <div className="flex justify-center mb-8">
           <img
-            src="/lovable-uploads/253971c8-5094-4170-b201-fd5350d6d5e1.png"
+            src="/lovable-uploads/004d9328-a886-4a3e-bf4a-3a1c292cc0c5.png"
             alt="Lead Activators"
-            className="h-20"
+            className="h-20 w-20"
           />
         </div>
         <h1 className="text-5xl font-bold mb-6 text-brand-blue">Lead Activators Dashboard</h1>

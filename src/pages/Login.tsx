@@ -21,7 +21,14 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-[350px]">
-        <CardHeader>
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/lovable-uploads/004d9328-a886-4a3e-bf4a-3a1c292cc0c5.png" 
+              alt="Lead Activators Logo" 
+              className="h-16 w-16"
+            />
+          </div>
           <CardTitle>Log in to Lead Activators</CardTitle>
           <CardDescription>
             Enter your credentials to access your dashboard

@@ -48,7 +48,14 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="text-xl font-bold p-4">Lead Activators</div>
+        <div className="flex items-center gap-2 p-4">
+          <img 
+            src="/lovable-uploads/004d9328-a886-4a3e-bf4a-3a1c292cc0c5.png" 
+            alt="Lead Activators Logo" 
+            className="h-8 w-8"
+          />
+          <span className="text-xl font-bold">Lead Activators</span>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
