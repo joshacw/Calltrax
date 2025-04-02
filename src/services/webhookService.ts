@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -134,7 +133,7 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
     let leadId;
     const { data: leadData, error: leadError } = await supabase
       .from('leads')
-      .select('id, time_of_notification')
+      .select('id, time_of_notification, number_of_calls, number_of_conversations, connected, speed_to_lead')
       .eq('agency_id', agencyData.id)
       .eq('contact_number', payload.caller_id)
       .order('created_at', { ascending: false })
@@ -180,7 +179,7 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       leadId = leadData[0].id;
       
       // Calculate speed to lead if this is the first call and we have notification time
-      let speedToLead;
+      let speedToLead = leadData[0].speed_to_lead;
       if (leadData[0].time_of_notification) {
         const firstCallTime = new Date(payload.timestamp);
         const notificationTime = new Date(leadData[0].time_of_notification);
@@ -191,16 +190,15 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
         }
       }
       
-      // Here's where the error is - we need to use a direct update query instead of RPC
-      // since increment_call_count is not available or not matching the expected type
+      // Use direct update instead of RPC
       const { error: updateLeadError } = await supabase
         .from('leads')
         .update({
-          number_of_calls: leadData[0].number_of_calls + 1,
-          number_of_conversations: isRealConnection ? leadData[0].number_of_conversations + 1 : leadData[0].number_of_conversations,
-          connected: leadData[0].connected || isRealConnection,
+          number_of_calls: (leadData[0].number_of_calls || 0) + 1,
+          number_of_conversations: isRealConnection ? (leadData[0].number_of_conversations || 0) + 1 : (leadData[0].number_of_conversations || 0),
+          connected: (leadData[0].connected || false) || isRealConnection,
           time_of_last_call: payload.timestamp,
-          speed_to_lead: speedToLead || leadData[0].speed_to_lead
+          speed_to_lead: speedToLead
         })
         .eq('id', leadId);
       
