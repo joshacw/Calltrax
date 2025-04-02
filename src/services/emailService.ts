@@ -3,12 +3,12 @@ import { DashboardMetrics, FilterOptions } from '@/types';
 import { getDashboardMetrics } from './mockData';
 
 // Initialize Resend with API key from localStorage
-const getResendApiKey = (): string | null => {
+export const getResendApiKey = (): string | null => {
   return localStorage.getItem('resendApiKey');
 };
 
 // Initialize Resend with API key
-const getResendClient = (): Resend | null => {
+const initResend = (): Resend | null => {
   const apiKey = getResendApiKey();
   if (!apiKey) return null;
   
@@ -86,7 +86,7 @@ export const saveEmailReportPreferences = (clientId: string, prefs: EmailReportP
 
 // Email sending functions
 export const sendInvitationEmail = async (email: string, clientName: string): Promise<boolean> => {
-  const resend = getResendClient();
+  const resend = initResend();
   if (!resend) {
     console.error("Resend API key not configured");
     return false;
@@ -119,7 +119,7 @@ export const sendPerformanceReport = async (
   metrics: DashboardMetrics,
   reportType: 'daily' | 'weekly'
 ): Promise<boolean> => {
-  const resend = getResendClient();
+  const resend = initResend();
   if (!resend) {
     console.error("Resend API key not configured");
     return false;
