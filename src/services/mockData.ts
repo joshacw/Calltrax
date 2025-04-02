@@ -1,4 +1,3 @@
-
 import { Agency, Call, Client, DashboardMetrics, Lead, SubAccount, User } from "@/types";
 
 // Mock Users
@@ -223,7 +222,8 @@ export const calls: Call[] = [
 export const getDashboardMetrics = (
   agencyFilter?: string[],
   locationFilter?: string[],
-  dateRangeFilter?: { start: string; end: string }
+  dateRangeFilter?: { start: string; end: string },
+  teamMemberFilter?: string[]
 ): DashboardMetrics => {
   // In a real app, you would filter the data based on the provided filters
   // For now, we'll return static data
@@ -349,6 +349,22 @@ export const updateClient = (clientId: string, updates: Partial<Client>): Client
   };
   
   return clients[clientIndex];
+};
+
+// Get all dispositions (this would be more complex in a real app)
+export const getDispositions = (): string[] => {
+  return [
+    "Appointment Scheduled",
+    "Appointment Booked",
+    "Set Appointment",
+    "Information Provided",
+    "Not Interested",
+    "Follow Up",
+    "No Answer",
+    "Left Voicemail",
+    "Wrong Number",
+    "Do Not Call"
+  ];
 };
 
 // Function to authenticate user (mock version)

@@ -1,4 +1,3 @@
-
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Layout } from "@/components/Layout";
 import { MetricCard, StatCard } from "@/components/MetricCard";
@@ -35,8 +34,7 @@ const Dashboard = () => {
       filters.agencies,
       filters.locations,
       filters.dateRange,
-      filters.teamMembers,
-      filters.dispositions
+      filters.teamMembers
     ));
   };
   
