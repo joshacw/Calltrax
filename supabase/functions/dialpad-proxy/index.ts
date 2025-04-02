@@ -14,9 +14,28 @@ serve(async (req) => {
   }
 
   try {
-    const { endpoint, method, token, body } = await req.json();
+    const url = new URL(req.url);
+    const debug = url.searchParams.get("debug") === "true";
+    
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Failed to parse request body:", e);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    const { endpoint, method, token, body: requestBody } = body;
     
     if (!endpoint || !token) {
+      if (debug) console.log("Missing required parameters:", { endpoint, token });
+      
       return new Response(
         JSON.stringify({ error: "Missing required parameters" }),
         {
@@ -26,34 +45,66 @@ serve(async (req) => {
       );
     }
 
-    const url = `${DIALPAD_API_BASE_URL}${endpoint}`;
-    console.log(`Making ${method || "GET"} request to Dialpad API: ${url}`);
+    const targetUrl = `${DIALPAD_API_BASE_URL}${endpoint}`;
+    if (debug) console.log(`Making ${method || "GET"} request to Dialpad API: ${targetUrl}`);
 
-    const options: RequestInit = {
+    const options = {
       method: method || "GET",
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
-      body: body ? JSON.stringify(body) : undefined,
     };
 
-    const response = await fetch(url, options);
-    const data = await response.json().catch(() => null);
-    
-    // Return the response with appropriate status code
-    return new Response(
-      JSON.stringify({
-        status: response.status,
-        statusText: response.statusText,
-        data,
-      }),
-      {
-        status: response.ok ? 200 : response.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (requestBody && (method === "POST" || method === "PUT" || method === "PATCH")) {
+      options.body = JSON.stringify(requestBody);
+    }
+
+    try {
+      const response = await fetch(targetUrl, options);
+      let responseData;
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        responseData = await response.json();
+      } else {
+        // Handle non-JSON responses gracefully
+        const text = await response.text();
+        if (debug) console.log("Non-JSON response:", text.substring(0, 200) + "...");
+        
+        responseData = { 
+          _nonJson: true, 
+          text: text.substring(0, 1000) // Truncate long responses
+        };
       }
-    );
+      
+      // Return the response with appropriate status code
+      return new Response(
+        JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          data: responseData,
+        }),
+        {
+          status: 200, // Always return 200 from our proxy, with actual status in the body
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    } catch (fetchError) {
+      if (debug) console.error("Fetch error:", fetchError);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to fetch from Dialpad API", 
+          details: fetchError.message 
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error) {
     console.error("Error in dialpad-proxy:", error);
     return new Response(

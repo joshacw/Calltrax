@@ -277,8 +277,8 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       return false;
     }
     
-    // Use our proxy endpoint to test the connection
-    const response = await fetch(PROXY_URL, {
+    // Use our proxy endpoint to test the connection with a simple endpoint
+    const response = await fetch(`${PROXY_URL}?debug=true`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -290,6 +290,13 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       }),
     });
     
+    // Check if we got a response at all
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Proxy error response:", errorText);
+      return false;
+    }
+    
     // Parse the response
     const result = await response.json();
     console.log("Dialpad test connection response:", result.status, result.statusText);
@@ -300,7 +307,13 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       return false;
     }
     
-    return true;
+    // Check for non-JSON responses which might indicate an issue
+    if (result.data && result.data._nonJson) {
+      console.error("Received non-JSON response from Dialpad API:", result.data.text);
+      return false;
+    }
+    
+    return result.status >= 200 && result.status < 300;
   } catch (error) {
     console.error("Failed to test Dialpad connection:", error);
     // For network errors to our proxy, consider it a temporary issue, not a token issue
