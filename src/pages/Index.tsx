@@ -37,24 +37,30 @@ const Index = () => {
         </div>
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <div className="w-12 h-12 rounded-full bg-brand-green mb-4 flex items-center justify-center">
-              <span className="text-white font-bold text-xl">1</span>
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-brand-green flex items-center justify-center">
+                <span className="text-white font-bold text-xl">1</span>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold mb-2 text-brand-blue">Real-time Metrics</h3>
+            <h3 className="text-lg font-semibold mb-2 text-brand-blue text-center">Real-time Metrics</h3>
             <p className="text-gray-600">Monitor key performance indicators in real-time to optimize call center operations.</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <div className="w-12 h-12 rounded-full bg-brand-yellow mb-4 flex items-center justify-center">
-              <span className="text-white font-bold text-xl">2</span>
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-brand-yellow flex items-center justify-center">
+                <span className="text-white font-bold text-xl">2</span>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold mb-2 text-brand-blue">Lead Tracking</h3>
+            <h3 className="text-lg font-semibold mb-2 text-brand-blue text-center">Lead Tracking</h3>
             <p className="text-gray-600">Track leads from initial contact through conversion with detailed analytics.</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <div className="w-12 h-12 rounded-full bg-brand-orange mb-4 flex items-center justify-center">
-              <span className="text-white font-bold text-xl">3</span>
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-brand-orange flex items-center justify-center">
+                <span className="text-white font-bold text-xl">3</span>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold mb-2 text-brand-blue">Call Analytics</h3>
+            <h3 className="text-lg font-semibold mb-2 text-brand-blue text-center">Call Analytics</h3>
             <p className="text-gray-600">Analyze call dispositions, durations, and outcomes to improve agent performance.</p>
           </div>
         </div>
