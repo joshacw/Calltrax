@@ -1,7 +1,7 @@
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { BarChart3, Phone, Home, LogOut, Settings, Users, UserPlus } from "lucide-react";
+import { BarChart3, Phone, Home, LogOut, Settings, Users, UserPlus, Mail, User } from "lucide-react";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
@@ -113,6 +113,22 @@ const AppSidebar = () => {
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
+                      <a href="/team-members">
+                        <Users size={18} />
+                        <span>Team Members</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <a href="/email-reports">
+                        <Mail size={18} />
+                        <span>Email Reports</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
                       <a href="/reports">
                         <BarChart3 size={18} />
                         <span>Reports</span>
@@ -122,7 +138,7 @@ const AppSidebar = () => {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <a href="/account">
-                        <Settings size={18} />
+                        <User size={18} />
                         <span>Account</span>
                       </a>
                     </SidebarMenuButton>

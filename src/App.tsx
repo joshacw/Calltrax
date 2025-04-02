@@ -16,6 +16,9 @@ import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import ApiEndpoints from "./pages/ApiEndpoints";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import TeamMembers from "./pages/TeamMembers";
+import EmailReports from "./pages/EmailReports";
+import ClientAccount from "./pages/ClientAccount";
 
 const queryClient = new QueryClient();
 
@@ -40,10 +43,47 @@ const App = () => (
               } 
             />
             
-            <Route path="/leads" element={<Leads />} />
-            <Route path="/calls" element={<Calls />} />
-            <Route path="/add-client" element={<AddClient />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/leads" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Leads />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/calls" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Calls />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/add-client" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AddClient />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/settings" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/team-members" element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <TeamMembers />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/email-reports" element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <EmailReports />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/account" element={
+              <ProtectedRoute allowedRoles={["client"]}>
+                <ClientAccount />
+              </ProtectedRoute>
+            } />
             
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />

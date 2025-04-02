@@ -1,4 +1,3 @@
-
 import { Agency, Call, Client, DashboardMetrics, Lead, User } from "@/types";
 
 // Mock Users
@@ -260,8 +259,26 @@ export const getTeamMembers = (): { id: string; name: string }[] => {
 };
 
 // Function to authenticate user (mock version)
-export const authenticateUser = (email: string, password: string): User | null => {
-  // In a real app, you would validate the password
-  const user = users.find(u => u.email === email);
-  return user || null;
+export const getResendApiKey = (): string => {
+  return localStorage.getItem("resendApiKey") || "";
+};
+
+export const authenticateUser = (email: string, password: string) => {
+  if (email === "admin@calltrax.com" && password === "password") {
+    return {
+      id: "1",
+      email: "admin@calltrax.com",
+      name: "Admin User",
+      role: "admin" as const
+    };
+  } else if (email === "client1@example.com" && password === "password") {
+    return {
+      id: "2",
+      email: "client1@example.com",
+      name: "Example Client",
+      role: "client" as const,
+      clientId: "client_123" // Added clientId for client users
+    };
+  }
+  return null;
 };
