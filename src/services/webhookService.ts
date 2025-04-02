@@ -253,7 +253,7 @@ export const processDispositionEvent = async (payload: DispositionEventPayload):
 
 /**
  * Process an inbound lead webhook
- * This creates a new lead in the database
+ * This creates a new lead in the database or updates an existing one
  */
 export const processLeadWebhook = async (payload: LeadWebhookPayload): Promise<void> => {
   console.log("Processing lead webhook:", payload);
