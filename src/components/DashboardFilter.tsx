@@ -1,11 +1,10 @@
-
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FilterOptions } from "@/types";
 import { getAgenciesByClientId, getLocationsByClientId, getTeamMembers, getDispositions } from "@/services/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { CalendarRange, Filter, MapPin, Users, CheckSquare } from "lucide-react";
+import { Filter, Users, CheckSquare } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -202,37 +201,6 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
               </p>
             </div>
           </div>
-        </div>
-        
-        {/* Date range buttons spanning full width */}
-        <div className="md:col-span-2 flex flex-wrap gap-2 mt-2">
-          <Button 
-            variant="outline"
-            className={dateRange.start === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() ? "bg-secondary" : ""}
-            onClick={() => handleDateRangeChange(7)}
-            size="sm"
-          >
-            <CalendarRange className="mr-2 h-4 w-4" />
-            Last 7 Days
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => handleDateRangeChange(30)}
-            size="sm"
-          >
-            <CalendarRange className="mr-2 h-4 w-4" />
-            Last 30 Days
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => handleDateRangeChange(90)}
-            size="sm"
-          >
-            <CalendarRange className="mr-2 h-4 w-4" />
-            Last 90 Days
-          </Button>
         </div>
       </div>
     </div>
