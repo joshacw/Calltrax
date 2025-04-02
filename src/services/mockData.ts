@@ -245,8 +245,14 @@ export const getDashboardMetrics = (
 const getWeekToDateData = (): GraphDataPoint[] => {
   const data: GraphDataPoint[] = [];
   const today = new Date();
+  
+  // Get the start of the current week (Monday)
   const startOfCurrentWeek = new Date(today);
   startOfCurrentWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Start on Monday
+  
+  // Get end of week (Sunday)
+  const endOfCurrentWeek = new Date(startOfCurrentWeek);
+  endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 6);
   
   // Daily benchmarks
   const dailyBenchmarks = {
@@ -262,11 +268,19 @@ const getWeekToDateData = (): GraphDataPoint[] => {
     { leads: 1.1, calls: 1.05, connections: 1.1, appointments: 0.9 },    // Tuesday
     { leads: 1.0, calls: 1.15, connections: 1.05, appointments: 1.2 },   // Wednesday
     { leads: 0.95, calls: 1.0, connections: 0.95, appointments: 1.1 },   // Thursday
-    { leads: 0.85, calls: 0.9, connections: 0.85, appointments: 0.85 }   // Friday
+    { leads: 0.85, calls: 0.9, connections: 0.85, appointments: 0.85 },  // Friday
+    { leads: 0.7, calls: 0.65, connections: 0.6, appointments: 0.7 },    // Saturday
+    { leads: 0.5, calls: 0.45, connections: 0.4, appointments: 0.5 },    // Sunday
   ];
   
-  // Generate data for each weekday (Mon-Fri)
-  for (let i = 0; i < 5; i++) {
+  // For cumulative calculations
+  let cumulativeLeads = 0;
+  let cumulativeCalls = 0;
+  let cumulativeConnections = 0;
+  let cumulativeAppointments = 0;
+  
+  // Generate data for each day of the week (Mon-Sun)
+  for (let i = 0; i < 7; i++) {
     const currentDate = new Date(startOfCurrentWeek);
     currentDate.setDate(startOfCurrentWeek.getDate() + i);
     const variation = dailyVariations[i];
@@ -277,6 +291,12 @@ const getWeekToDateData = (): GraphDataPoint[] => {
     const calls = Math.round(dailyBenchmarks.calls * variation.calls);
     const connections = Math.round(dailyBenchmarks.connections * variation.connections);
     const appointments = Math.round(dailyBenchmarks.appointments * variation.appointments);
+    
+    // Update cumulative values
+    cumulativeLeads += leads;
+    cumulativeCalls += calls;
+    cumulativeConnections += connections;
+    cumulativeAppointments += appointments;
     
     const dateStr = currentDate.toISOString().split('T')[0];
     
@@ -291,7 +311,15 @@ const getWeekToDateData = (): GraphDataPoint[] => {
         leadsProjected: leads,
         callsProjected: calls,
         connectionsProjected: connections,
-        appointmentsProjected: appointments
+        appointmentsProjected: appointments,
+        leadsCumulative: null,
+        callsCumulative: null,
+        connectionsCumulative: null,
+        appointmentsCumulative: null,
+        leadsProjectedCumulative: cumulativeLeads,
+        callsProjectedCumulative: cumulativeCalls,
+        connectionsProjectedCumulative: cumulativeConnections,
+        appointmentsProjectedCumulative: cumulativeAppointments
       });
     } else {
       // For past dates (up to today)
@@ -304,7 +332,15 @@ const getWeekToDateData = (): GraphDataPoint[] => {
         leadsProjected: null,
         callsProjected: null,
         connectionsProjected: null,
-        appointmentsProjected: null
+        appointmentsProjected: null,
+        leadsCumulative: cumulativeLeads,
+        callsCumulative: cumulativeCalls,
+        connectionsCumulative: cumulativeConnections,
+        appointmentsCumulative: cumulativeAppointments,
+        leadsProjectedCumulative: null,
+        callsProjectedCumulative: null,
+        connectionsProjectedCumulative: null,
+        appointmentsProjectedCumulative: null
       });
     }
   }

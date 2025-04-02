@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -95,6 +94,14 @@ export interface GraphDataPoint {
   connectionsProjected?: number | null;
   appointmentsProjected?: number | null;
   leadsProjected?: number | null;
+  callsCumulative?: number | null;
+  connectionsCumulative?: number | null;
+  appointmentsCumulative?: number | null;
+  leadsCumulative?: number | null;
+  callsProjectedCumulative?: number | null;
+  connectionsProjectedCumulative?: number | null;
+  appointmentsProjectedCumulative?: number | null;
+  leadsProjectedCumulative?: number | null;
 }
 
 export interface FilterOptions {

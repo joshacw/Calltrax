@@ -1,4 +1,3 @@
-
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Layout } from "@/components/Layout";
 import { MetricCard, StatCard } from "@/components/MetricCard";
@@ -74,9 +73,8 @@ const Dashboard = () => {
         
         {user?.role === "admin" && <InsightsPanel />}
         
-        {/* Performance Chart - moved above metrics */}
+        {/* Performance Chart - with improved visualization */}
         <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Week To Date Performance Trends</h2>
           <PerformanceChart data={metrics.graphData || []} />
         </div>
         

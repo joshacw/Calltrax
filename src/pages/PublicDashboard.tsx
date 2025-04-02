@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { DashboardMetrics } from "@/types";
@@ -19,9 +18,8 @@ const PublicDashboard = () => {
         <p className="text-muted-foreground">Public view - Read only</p>
       </div>
       
-      {/* Performance Chart - moved above metrics */}
+      {/* Performance Chart - with improved visualization */}
       <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Week To Date Performance Trends</h2>
         <PerformanceChart data={metrics.graphData || []} />
       </div>
       
