@@ -1,29 +1,61 @@
-import { Agency, Call, Client, DashboardMetrics, Lead, User } from "@/types";
+
+import { Agency, Call, Client, DashboardMetrics, Lead, SubAccount, User } from "@/types";
 
 // Mock Users
 export const users: User[] = [
   { id: "1", email: "admin@calltrax.com", name: "Admin User", role: "admin" },
   { id: "2", email: "client1@example.com", name: "Client 1", role: "client", clientId: "1" },
   { id: "3", email: "client2@example.com", name: "Client 2", role: "client", clientId: "2" },
+  { id: "4", email: "agency1@example.com", name: "Agency User", role: "agency", agencyId: "1" },
 ];
 
 // Mock Clients
 export const clients: Client[] = [
   { 
     id: "1", 
-    name: "ABC Company", 
+    name: "ABC Company",
+    gohighlevelApiKey: "",
+    gohighlevelLocationId: "",
+    gohighlevelIntegrated: false,
     agencies: [
-      { id: "1", name: "ABC North", clientId: "1", locations: ["New York", "Boston"] },
-      { id: "2", name: "ABC South", clientId: "1", locations: ["Miami", "Atlanta"] },
+      { id: "1", name: "ABC North", clientId: "1", locations: ["New York", "Boston"], subAccounts: [] },
+      { id: "2", name: "ABC South", clientId: "1", locations: ["Miami", "Atlanta"], subAccounts: [] },
     ]
   },
   { 
     id: "2", 
-    name: "XYZ Corp", 
+    name: "XYZ Corp",
+    gohighlevelApiKey: "",
+    gohighlevelLocationId: "",
+    gohighlevelIntegrated: false,
     agencies: [
-      { id: "3", name: "XYZ West", clientId: "2", locations: ["Los Angeles", "San Francisco"] },
-      { id: "4", name: "XYZ East", clientId: "2", locations: ["Chicago", "Philadelphia"] },
+      { id: "3", name: "XYZ West", clientId: "2", locations: ["Los Angeles", "San Francisco"], subAccounts: [] },
+      { id: "4", name: "XYZ East", clientId: "2", locations: ["Chicago", "Philadelphia"], subAccounts: [] },
     ]
+  },
+];
+
+// Mock SubAccounts
+const subAccounts: SubAccount[] = [
+  {
+    id: "sub1",
+    name: "New York Office",
+    email: "ny@abcnorth.com",
+    password: "password123",
+    agencyId: "1",
+    locationId: "loc1",
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "sub2",
+    name: "Boston Office",
+    email: "boston@abcnorth.com",
+    password: "password123",
+    agencyId: "1",
+    locationId: "loc2",
+    active: true,
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -256,6 +288,67 @@ export const getTeamMembers = (): { id: string; name: string }[] => {
     { id: "tm3", name: "Michael Johnson" },
     { id: "tm4", name: "Emily Williams" },
   ];
+};
+
+// Get agency by ID
+export const getAgencyById = (agencyId: string): Agency | undefined => {
+  for (const client of clients) {
+    const agency = client.agencies.find(a => a.id === agencyId);
+    if (agency) return agency;
+  }
+  return undefined;
+};
+
+// Get agency locations as location objects
+export const getAgencyLocations = (locations: string[]): { id: string; name: string }[] => {
+  return locations.map((location, index) => ({
+    id: `loc${index + 1}`,
+    name: location
+  }));
+};
+
+// Get subaccounts for an agency
+export const getSubAccounts = (agencyId: string): SubAccount[] => {
+  return subAccounts.filter(account => account.agencyId === agencyId);
+};
+
+// Save a new subaccount
+export const saveSubAccount = (agencyId: string, accountData: Omit<SubAccount, 'id' | 'createdAt'>): SubAccount => {
+  const newAccount: SubAccount = {
+    id: `sub${subAccounts.length + 1}`,
+    ...accountData,
+    agencyId,
+    createdAt: new Date().toISOString()
+  };
+  
+  subAccounts.push(newAccount);
+  return newAccount;
+};
+
+// Remove a subaccount
+export const removeSubAccount = (agencyId: string, accountId: string): void => {
+  const index = subAccounts.findIndex(
+    account => account.id === accountId && account.agencyId === agencyId
+  );
+  
+  if (index !== -1) {
+    subAccounts.splice(index, 1);
+  }
+};
+
+// Update client information
+export const updateClient = (clientId: string, updates: Partial<Client>): Client | undefined => {
+  const clientIndex = clients.findIndex(client => client.id === clientId);
+  
+  if (clientIndex === -1) return undefined;
+  
+  // Update the client with the new values
+  clients[clientIndex] = {
+    ...clients[clientIndex],
+    ...updates
+  };
+  
+  return clients[clientIndex];
 };
 
 // Function to authenticate user (mock version)
