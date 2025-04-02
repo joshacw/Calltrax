@@ -119,7 +119,12 @@ export const InsightsPanel = () => {
       
       // After fade out completes, change insight and fade in
       const fadeOutTimer = setTimeout(() => {
-        setCurrentInsightIndex((prevIndex) => (prevIndex + 1) % insights.length);
+        // Get next pair of indices (ensuring we don't go out of bounds)
+        setCurrentInsightIndex((prevIndex) => {
+          const newIndex = (prevIndex + 2) % insights.length;
+          // If we're at the end with an odd number of insights, go back to the start
+          return newIndex === insights.length - 1 ? 0 : newIndex;
+        });
         setAnimationState("fade-in");
         
         // After fade in completes, set to visible
@@ -133,8 +138,8 @@ export const InsightsPanel = () => {
       return () => clearTimeout(fadeOutTimer);
     };
     
-    // Set the interval for rotating insights (12 seconds)
-    const intervalId = setInterval(rotateInsight, 12000);
+    // Set the interval for rotating insights (6 seconds instead of 12)
+    const intervalId = setInterval(rotateInsight, 6000);
     
     // Initial fade in
     setAnimationState("fade-in");
@@ -198,19 +203,29 @@ export const InsightsPanel = () => {
       <CardContent>
         <div className="grid gap-4">
           {showAllInsights ? (
-            // Show all insights
-            insights.map((insight, index) => (
-              <InsightItem key={index} insight={insight} />
-            ))
+            // Show all insights in a grid
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {insights.map((insight, index) => (
+                <InsightItem key={index} insight={insight} />
+              ))}
+            </div>
           ) : (
-            // Show only current insight with animation
+            // Show two insights at a time in columns
             <div 
               className={cn(
-                "transition-all duration-300 ease-out",
+                "grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-300 ease-out",
                 getAnimationClass()
               )}
             >
+              {/* First insight */}
               {insights.length > 0 && <InsightItem insight={insights[currentInsightIndex]} />}
+              
+              {/* Second insight (if available) */}
+              {insights.length > 1 && (
+                <InsightItem 
+                  insight={insights[(currentInsightIndex + 1) % insights.length]} 
+                />
+              )}
             </div>
           )}
         </div>
