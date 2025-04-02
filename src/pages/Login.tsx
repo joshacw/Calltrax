@@ -22,7 +22,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-[350px]">
         <CardHeader>
-          <CardTitle>Log in to CallTrax</CardTitle>
+          <CardTitle>Log in to Lead Activators</CardTitle>
           <CardDescription>
             Enter your credentials to access your dashboard
           </CardDescription>
