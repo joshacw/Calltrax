@@ -5,7 +5,7 @@ import { Call, FilterOptions } from "@/types";
 import { useEffect, useState } from "react";
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Phone, Loader2 } from "lucide-react";
+import { ExternalLink, Phone, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -43,6 +43,7 @@ const CallsPage = () => {
           disposition,
           notes,
           timestamp,
+          agent_connected,
           leads!inner(agency_id)
         `)
         .gte('timestamp', filters.dateRange.start)
@@ -73,7 +74,8 @@ const CallsPage = () => {
         publicShareLink: item.public_share_link,
         disposition: item.disposition || 'Not Set',
         notes: item.notes || '',
-        timestamp: item.timestamp
+        timestamp: item.timestamp,
+        agentConnected: item.agent_connected
       }));
       
       setCalls(formattedCalls);
@@ -116,6 +118,7 @@ const CallsPage = () => {
                 <TableHead>Direction</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Timestamp</TableHead>
+                <TableHead>Agent Connected</TableHead>
                 <TableHead>Disposition</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead>Recording</TableHead>
@@ -124,7 +127,7 @@ const CallsPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex justify-center items-center">
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
                       <span>Loading call data...</span>
@@ -139,6 +142,18 @@ const CallsPage = () => {
                     <TableCell className="capitalize">{call.direction}</TableCell>
                     <TableCell>{formatDuration(call.duration)}</TableCell>
                     <TableCell>{formatTime(call.timestamp)}</TableCell>
+                    <TableCell>
+                      {call.agentConnected ? 
+                        <div className="flex items-center text-green-600">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <span>Yes</span>
+                        </div> : 
+                        <div className="flex items-center text-gray-400">
+                          <XCircle className="h-4 w-4 mr-1" />
+                          <span>No</span>
+                        </div>
+                      }
+                    </TableCell>
                     <TableCell>{call.disposition}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{call.notes}</TableCell>
                     <TableCell>
@@ -162,7 +177,7 @@ const CallsPage = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">
+                  <TableCell colSpan={9} className="text-center py-6">
                     No calls found for the selected filters
                   </TableCell>
                 </TableRow>

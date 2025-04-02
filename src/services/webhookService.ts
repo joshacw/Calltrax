@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +14,16 @@ export interface HangupEventPayload {
   recording_url?: string;
   call_outcome?: "answered" | "voicemail" | "missed" | "declined";
   agent_connected?: boolean;
+}
+
+export interface ConnectedEventPayload {
+  event_type: "call.connected";
+  call_id: string;
+  timestamp: string;
+  call_center_id: string;
+  caller_id: string;
+  call_direction: "inbound" | "outbound";
+  agent_id?: string;
 }
 
 export interface DispositionEventPayload {
@@ -42,6 +53,49 @@ export interface LeadWebhookPayload {
     id: string;
   };
 }
+
+/**
+ * Process a connected event from Dialpad
+ * This updates the call record with agent connection status
+ */
+export const processConnectedEvent = async (payload: ConnectedEventPayload): Promise<void> => {
+  console.log("Processing connected event:", payload);
+  
+  try {
+    // Find the integration_settings to get the client_id
+    const { data: settingsData, error: settingsError } = await supabase
+      .from('integration_settings')
+      .select('client_id, settings')
+      .eq('integration_type', 'dialpad')
+      .filter('settings->call_center_id', 'eq', payload.call_center_id)
+      .single();
+      
+    if (settingsError) {
+      console.error("Error finding client for call center:", settingsError);
+      throw settingsError;
+    }
+    
+    // Update the call connection status
+    const { error: updateError } = await supabase.rpc('update_call_connection_status', { 
+      call_id: payload.call_id,
+      is_connected: true
+    });
+    
+    if (updateError) {
+      console.error("Error updating call connection status:", updateError);
+      throw updateError;
+    }
+    
+    toast.success("Call connected event processed", {
+      description: `Call ID: ${payload.call_id.substring(0, 8)}...`,
+    });
+  } catch (error) {
+    console.error("Failed to process connected event:", error);
+    toast.error("Failed to process connected event", {
+      description: error.message,
+    });
+  }
+};
 
 /**
  * Process a hangup event from Dialpad

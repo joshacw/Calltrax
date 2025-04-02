@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -61,6 +62,7 @@ export interface Call {
   disposition: string;
   notes: string;
   timestamp: string;
+  agentConnected?: boolean;
 }
 
 export interface DashboardMetrics {

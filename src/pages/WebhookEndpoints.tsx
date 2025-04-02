@@ -44,6 +44,7 @@ const WebhookEndpoints = () => {
   const leadWebhookUrl = `${host}/api/webhooks/leads/${webhookKey}`;
   const hangupWebhookUrl = `${host}/api/webhooks/dialpad/hangup/${webhookKey}`;
   const dispositionWebhookUrl = `${host}/api/webhooks/dialpad/disposition/${webhookKey}`;
+  const connectedWebhookUrl = `${host}/api/webhooks/dialpad/connected/${webhookKey}`;
 
   return (
     <Layout>
@@ -127,6 +128,55 @@ const WebhookEndpoints = () => {
           
           <TabsContent value="dialpad">
             <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connected Event Webhook</CardTitle>
+                  <CardDescription>
+                    Endpoint for receiving call connected events from Dialpad
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium mb-1">Webhook URL</div>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={connectedWebhookUrl}
+                        readOnly
+                        className="font-mono text-sm flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(connectedWebhookUrl, "Connected webhook URL copied")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      This endpoint receives connected events and marks calls as connected immediately.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2 mt-4">
+                    <div className="text-sm font-medium">Dialpad Configuration</div>
+                    <div className="bg-gray-100 p-3 rounded text-xs">
+                      <p className="font-medium mb-2">Event Subscription Payload:</p>
+                      <pre className="overflow-auto">
+{`{
+  "enabled": true,
+  "call_states": [
+    "connected"
+  ],
+  "endpoint_id": "endpoint_id_from_dialpad",
+  "target_type": "callcenter",
+  "target_id": "call_center_id_from_dialpad"
+}`}
+                      </pre>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Hangup Event Webhook</CardTitle>

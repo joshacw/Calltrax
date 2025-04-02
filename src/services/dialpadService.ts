@@ -107,8 +107,10 @@ export const createDialpadClient = async (clientName: string): Promise<{
   callCenter: DialpadCallCenter;
   hangupEndpoint: DialpadEndpoint;
   dispositionEndpoint: DialpadEndpoint;
+  connectedEndpoint: DialpadEndpoint;
   hangupSubscription: DialpadSubscription;
   dispositionSubscription: DialpadSubscription;
+  connectedSubscription: DialpadSubscription;
 }> => {
   try {
     // Create a channel
@@ -126,6 +128,10 @@ export const createDialpadClient = async (clientName: string): Promise<{
       `https://api.calltrax.com/webhooks/dialpad/disposition/${callCenter.id}`
     );
     
+    const connectedEndpoint = await createDialpadEndpoint(
+      `https://api.calltrax.com/webhooks/dialpad/connected/${callCenter.id}`
+    );
+    
     // Setup event subscriptions
     const hangupSubscription = await createDialpadSubscription(
       callCenter.id,
@@ -139,13 +145,21 @@ export const createDialpadClient = async (clientName: string): Promise<{
       dispositionEndpoint.id
     );
     
+    const connectedSubscription = await createDialpadSubscription(
+      callCenter.id,
+      ["connected"],
+      connectedEndpoint.id
+    );
+    
     return {
       channel,
       callCenter,
       hangupEndpoint,
       dispositionEndpoint,
+      connectedEndpoint,
       hangupSubscription,
-      dispositionSubscription
+      dispositionSubscription,
+      connectedSubscription
     };
   } catch (error) {
     console.error("Error creating Dialpad client:", error);

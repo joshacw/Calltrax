@@ -43,6 +43,7 @@ export type Database = {
       }
       calls: {
         Row: {
+          agent_connected: boolean | null
           contact_number: string
           created_at: string
           direction: string
@@ -56,6 +57,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agent_connected?: boolean | null
           contact_number: string
           created_at?: string
           direction: string
@@ -69,6 +71,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agent_connected?: boolean | null
           contact_number?: string
           created_at?: string
           direction?: string
@@ -462,7 +465,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_call_connection_status: {
+        Args: {
+          call_id: string
+          is_connected: boolean
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
