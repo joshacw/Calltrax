@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAgencyById, getAgencyLocations, saveSubAccount, getSubAccounts, removeSubAccount, SubAccount } from "@/services/mockData";
+import { getAgencyById, getAgencyLocations, saveSubAccount, getSubAccounts, removeSubAccount, subAccounts as allSubAccounts } from "@/services/mockData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -29,7 +29,7 @@ const formSchema = z.object({
 
 const SubAccountsPage = () => {
   const { user } = useAuth();
-  const [subAccounts, setSubAccounts] = useState<SubAccount[]>([]);
+  const [subAccounts, setSubAccounts] = useState<typeof allSubAccounts>([]);
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   
@@ -70,13 +70,14 @@ const SubAccountsPage = () => {
     if (!user?.agencyId) return;
     
     try {
-      // Create new subaccount
+      // Create new subaccount with agencyId
       const newSubAccount = saveSubAccount(user.agencyId, {
         name: values.name,
         email: values.email,
         password: values.password,
         locationId: values.locationId,
         active: values.active,
+        agencyId: user.agencyId, // Add the agencyId here
       });
       
       setSubAccounts([...subAccounts, newSubAccount]);

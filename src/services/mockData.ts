@@ -36,7 +36,7 @@ export const clients: Client[] = [
 ];
 
 // Mock SubAccounts
-const subAccounts: SubAccount[] = [
+export const subAccounts: SubAccount[] = [
   {
     id: "sub1",
     name: "New York Office",
