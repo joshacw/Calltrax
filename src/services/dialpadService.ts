@@ -26,6 +26,11 @@ export interface DialpadWebhook {
   created_at: string;
 }
 
+// Get the Dialpad API token from localStorage
+const getDialpadApiToken = (): string => {
+  return localStorage.getItem("dialpadApiToken") || "";
+};
+
 // Mock client creation in Dialpad
 export const createDialpadClient = async (clientName: string): Promise<{
   channel: DialpadChannel;
@@ -33,7 +38,13 @@ export const createDialpadClient = async (clientName: string): Promise<{
   hangupWebhook: DialpadWebhook;
   dispositionWebhook: DialpadWebhook;
 }> => {
-  // In a real implementation, this would make API calls to Dialpad
+  // Check if API token exists
+  const apiToken = getDialpadApiToken();
+  if (!apiToken) {
+    throw new Error("Dialpad API token not found. Please set it in Settings > Integrations.");
+  }
+  
+  // In a real implementation, this would make API calls to Dialpad using the token
   
   // Create a channel
   const channel = await createDialpadChannel(clientName);

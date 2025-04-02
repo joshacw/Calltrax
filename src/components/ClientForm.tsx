@@ -16,8 +16,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { createDialpadClient } from "@/services/dialpadService";
+import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Create a schema for client creation
 const clientSchema = z.object({
@@ -38,7 +40,9 @@ interface ClientFormProps {
 }
 
 export const ClientForm = ({ onSuccess }: ClientFormProps) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [apiTokenMissing, setApiTokenMissing] = useState(false);
   const [steps, setSteps] = useState<Record<string, StepStatus>>({
     createChannel: { status: "pending", message: "Create channel in Dialpad" },
     createCallCenter: { status: "pending", message: "Create call center in Dialpad" },
@@ -55,8 +59,17 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
 
   const onSubmit = async (data: ClientFormValues) => {
     setLoading(true);
+    setApiTokenMissing(false);
     
     try {
+      // Check if Dialpad API token exists
+      const apiToken = localStorage.getItem("dialpadApiToken");
+      if (!apiToken) {
+        setApiTokenMissing(true);
+        setLoading(false);
+        return;
+      }
+      
       // Step 1: Create a channel in Dialpad
       updateStep("createChannel", "loading");
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
@@ -121,6 +134,26 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {apiTokenMissing && (
+          <Alert className="mb-6 bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Dialpad API Token Missing</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              You need to set up your Dialpad API token before adding clients.
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate("/settings")}
+                  className="text-amber-800 border-amber-300 hover:bg-amber-100"
+                >
+                  Go to Settings
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
