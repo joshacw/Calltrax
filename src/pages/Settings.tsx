@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -11,6 +10,7 @@ import { toast } from "sonner";
 import { Save, LineChart, Phone, WebhookIcon } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { validateDialpadApiToken } from "@/services/dialpadService";
+import { DialpadCallCenters } from "@/components/DialpadCallCenters";
 
 const SettingsPage = () => {
   const [dialpadApiToken, setDialpadApiToken] = useState(() => {
@@ -18,6 +18,7 @@ const SettingsPage = () => {
   });
   
   const [dialpadTokenValid, setDialpadTokenValid] = useState<boolean | null>(null);
+  const [showCallCenters, setShowCallCenters] = useState(false);
   
   const [webhookUrl, setWebhookUrl] = useState(() => {
     return localStorage.getItem("webhookUrl") || `${window.location.origin}/api/webhooks/leads`;
@@ -45,12 +46,15 @@ const SettingsPage = () => {
         try {
           const isValid = await validateDialpadApiToken();
           setDialpadTokenValid(isValid);
+          setShowCallCenters(isValid);
         } catch (error) {
           console.error("Error validating Dialpad token:", error);
           setDialpadTokenValid(false);
+          setShowCallCenters(false);
         }
       } else {
         setDialpadTokenValid(null);
+        setShowCallCenters(false);
       }
     };
     
@@ -69,16 +73,20 @@ const SettingsPage = () => {
         
         if (isValid) {
           toast.success("Dialpad API token saved and verified successfully");
+          setShowCallCenters(true);
         } else {
           toast.error("Dialpad API token saved but could not be verified. Please check the token.");
+          setShowCallCenters(false);
         }
       } else {
         setDialpadTokenValid(null);
+        setShowCallCenters(false);
         toast.success("Dialpad API token cleared");
       }
     } catch (error) {
       console.error("Error saving or validating Dialpad token:", error);
       toast.error(`Error: ${error.message}`);
+      setShowCallCenters(false);
     } finally {
       setIsSaving(false);
     }
@@ -94,6 +102,11 @@ const SettingsPage = () => {
       });
       setIsSaving(false);
     }, 2000);
+  };
+  
+  const handleAgenciesCreated = () => {
+    // Refresh data or perform any action needed after agencies are created
+    toast.success("Agencies created successfully");
   };
   
   const handleSaveKpiSettings = () => {
@@ -216,6 +229,10 @@ const SettingsPage = () => {
                         : "Your Dialpad API token is invalid. Please check and update it."}
                     </p>
                   </div>
+                )}
+                
+                {showCallCenters && dialpadTokenValid && (
+                  <DialpadCallCenters onCreateAgencies={handleAgenciesCreated} />
                 )}
                 
                 {dialpadTokenValid && (

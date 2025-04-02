@@ -100,18 +100,12 @@ export const processHangupEvent = async (payload: HangupEventPayload): Promise<v
       // Update the existing lead
       leadId = leadData[0].id;
       
-      const { error: updateLeadError } = await supabase
-        .from('leads')
-        .update({
-          time_of_last_call: payload.timestamp,
-          number_of_calls: supabase.rpc('increment', { x: 1, row_id: leadId, table: 'leads', column: 'number_of_calls' }),
-          number_of_conversations: payload.duration > 10 ? 
-            supabase.rpc('increment', { x: 1, row_id: leadId, table: 'leads', column: 'number_of_conversations' }) : 
-            supabase.raw('number_of_conversations'),
-          connected: payload.duration > 10 ? true : supabase.raw('connected')
-        })
-        .eq('id', leadId);
-        
+      // Fixed: Use a correct increment method
+      const { error: updateLeadError } = await supabase.rpc('increment_call_count', { 
+        lead_id: leadId,
+        is_conversation: payload.duration > 10
+      });
+      
       if (updateLeadError) {
         console.error("Error updating lead:", updateLeadError);
         throw updateLeadError;
