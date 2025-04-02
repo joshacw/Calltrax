@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, LineChart, Phone, WebhookIcon } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { validateDialpadApiToken } from "@/services/dialpadService";
 
 const SettingsPage = () => {
   const [dialpadApiToken, setDialpadApiToken] = useState(() => {
     return localStorage.getItem("dialpadApiToken") || "";
   });
+  
+  const [dialpadTokenValid, setDialpadTokenValid] = useState<boolean | null>(null);
   
   const [webhookUrl, setWebhookUrl] = useState(() => {
     return localStorage.getItem("webhookUrl") || `${window.location.origin}/api/webhooks/leads`;
@@ -34,16 +37,51 @@ const SettingsPage = () => {
   });
   
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Check if the Dialpad token is valid on component mount
+  useEffect(() => {
+    const checkToken = async () => {
+      if (dialpadApiToken) {
+        try {
+          const isValid = await validateDialpadApiToken();
+          setDialpadTokenValid(isValid);
+        } catch (error) {
+          console.error("Error validating Dialpad token:", error);
+          setDialpadTokenValid(false);
+        }
+      } else {
+        setDialpadTokenValid(null);
+      }
+    };
+    
+    checkToken();
+  }, [dialpadApiToken]);
 
-  const handleSaveDialpadToken = () => {
+  const handleSaveDialpadToken = async () => {
     setIsSaving(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
       localStorage.setItem("dialpadApiToken", dialpadApiToken);
+      
+      if (dialpadApiToken) {
+        const isValid = await validateDialpadApiToken();
+        setDialpadTokenValid(isValid);
+        
+        if (isValid) {
+          toast.success("Dialpad API token saved and verified successfully");
+        } else {
+          toast.error("Dialpad API token saved but could not be verified. Please check the token.");
+        }
+      } else {
+        setDialpadTokenValid(null);
+        toast.success("Dialpad API token cleared");
+      }
+    } catch (error) {
+      console.error("Error saving or validating Dialpad token:", error);
+      toast.error(`Error: ${error.message}`);
+    } finally {
       setIsSaving(false);
-      toast.success("Dialpad API token saved successfully");
-    }, 1000);
+    }
   };
   
   const handleSetupDialpad = () => {
@@ -150,7 +188,7 @@ const SettingsPage = () => {
                   
                   <Button 
                     onClick={handleSetupDialpad}
-                    disabled={!dialpadApiToken || isSaving}
+                    disabled={!dialpadTokenValid || isSaving}
                     variant="outline"
                     className="flex items-center gap-2"
                   >
@@ -163,7 +201,25 @@ const SettingsPage = () => {
                   </Button>
                 </div>
                 
-                {dialpadApiToken && (
+                {dialpadTokenValid !== null && (
+                  <div className="mt-4 p-4 rounded-md border" 
+                       className={dialpadTokenValid 
+                         ? "bg-green-50 border-green-200" 
+                         : "bg-red-50 border-red-200"}>
+                    <h3 className="text-sm font-medium mb-2">
+                      {dialpadTokenValid 
+                        ? "Dialpad API Token Valid" 
+                        : "Dialpad API Token Invalid"}
+                    </h3>
+                    <p className="text-sm">
+                      {dialpadTokenValid 
+                        ? "Your Dialpad API token is valid and working properly." 
+                        : "Your Dialpad API token is invalid. Please check and update it."}
+                    </p>
+                  </div>
+                )}
+                
+                {dialpadTokenValid && (
                   <div className="mt-4 p-4 bg-muted rounded-md">
                     <h3 className="text-sm font-medium mb-2">Integration Status</h3>
                     <ul className="space-y-2 text-sm">

@@ -16,10 +16,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
-import { createDialpadClient } from "@/services/dialpadService";
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Phone } from "lucide-react";
+import { createDialpadClient, validateDialpadApiToken } from "@/services/dialpadService";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Create a schema for client creation
 const clientSchema = z.object({
@@ -41,6 +43,7 @@ interface ClientFormProps {
 
 export const ClientForm = ({ onSuccess }: ClientFormProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [apiTokenMissing, setApiTokenMissing] = useState(false);
   const [steps, setSteps] = useState<Record<string, StepStatus>>({
@@ -50,6 +53,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
     createDispositionEndpoint: { status: "pending", message: "Create endpoint for disposition events" },
     setupHangupSubscription: { status: "pending", message: "Setup subscription for hangup events" },
     setupDispositionSubscription: { status: "pending", message: "Setup subscription for disposition events" },
+    saveClientToDatabase: { status: "pending", message: "Save client information to database" },
   });
   
   const form = useForm<ClientFormValues>({
@@ -58,6 +62,83 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
       name: "",
     },
   });
+
+  // Check if Dialpad API token exists on component mount
+  useState(() => {
+    const checkApiToken = async () => {
+      const apiToken = localStorage.getItem("dialpadApiToken");
+      if (!apiToken) {
+        setApiTokenMissing(true);
+      } else {
+        try {
+          const isValid = await validateDialpadApiToken();
+          if (!isValid) {
+            setApiTokenMissing(true);
+            toast.error("The Dialpad API token is invalid. Please check your settings.");
+          }
+        } catch (error) {
+          console.error("Error validating Dialpad token:", error);
+          setApiTokenMissing(true);
+        }
+      }
+    };
+    
+    checkApiToken();
+  });
+
+  const saveClientToDatabase = async (name: string, dialpadData: any): Promise<string> => {
+    try {
+      updateStep("saveClientToDatabase", "loading");
+      
+      // Insert client
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .insert({
+          name,
+        })
+        .select('id')
+        .single();
+        
+      if (clientError) throw clientError;
+      
+      // Insert integration settings for Dialpad
+      const { error: settingsError } = await supabase
+        .from('integration_settings')
+        .insert({
+          client_id: clientData.id,
+          integration_type: 'dialpad',
+          settings: {
+            channel_id: dialpadData.channel.id,
+            call_center_id: dialpadData.callCenter.id,
+            hangup_endpoint_id: dialpadData.hangupEndpoint.id,
+            disposition_endpoint_id: dialpadData.dispositionEndpoint.id,
+            hangup_subscription_id: dialpadData.hangupSubscription.id,
+            disposition_subscription_id: dialpadData.dispositionSubscription.id,
+          },
+        });
+        
+      if (settingsError) throw settingsError;
+      
+      // Create agency for the client (admin only)
+      if (user?.role === 'admin') {
+        const { error: agencyError } = await supabase
+          .from('agencies')
+          .insert({
+            name: `${name} Agency`,
+            client_id: clientData.id,
+          });
+          
+        if (agencyError) throw agencyError;
+      }
+      
+      updateStep("saveClientToDatabase", "completed");
+      return clientData.id;
+    } catch (error) {
+      console.error("Error saving client to database:", error);
+      updateStep("saveClientToDatabase", "error", `Database error: ${error.message}`);
+      throw error;
+    }
+  };
 
   const onSubmit = async (data: ClientFormValues) => {
     setLoading(true);
@@ -72,14 +153,13 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         return;
       }
       
-      // Step 1: Create a channel in Dialpad
+      // Step 1: Create all Dialpad resources
       updateStep("createChannel", "loading");
       
-      // In a real app, this would call the real Dialpad API
-      // Here we're using our mock implementation
       try {
-        const result = await createDialpadClient(data.name);
-        console.log("Dialpad integration completed:", result);
+        // Create full Dialpad integration with real API calls
+        const dialpadResult = await createDialpadClient(data.name);
+        console.log("Dialpad integration completed:", dialpadResult);
         
         // Update steps status based on results
         updateStep("createChannel", "completed");
@@ -88,6 +168,9 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         updateStep("createDispositionEndpoint", "completed");
         updateStep("setupHangupSubscription", "completed");
         updateStep("setupDispositionSubscription", "completed");
+        
+        // Save client information to database
+        await saveClientToDatabase(data.name, dialpadResult);
         
         toast.success(`Client ${data.name} has been created with all Dialpad integrations.`);
         form.reset();
@@ -100,14 +183,14 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         // Mark any pending steps as error
         Object.keys(steps).forEach(step => {
           if (steps[step].status === "loading" || steps[step].status === "pending") {
-            updateStep(step, "error");
+            updateStep(step, "error", error.message);
           }
         });
-        toast.error("There was an error setting up the Dialpad integration. Please try again.");
+        toast.error(`There was an error setting up the Dialpad integration: ${error.message}`);
       }
     } catch (error) {
       console.error("Error creating client:", error);
-      toast.error("There was an error creating the client. Please try again.");
+      toast.error(`There was an error creating the client: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -150,9 +233,10 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
                   variant="outline" 
                   size="sm" 
                   onClick={() => navigate("/settings")}
-                  className="text-amber-800 border-amber-300 hover:bg-amber-100"
+                  className="text-amber-800 border-amber-300 hover:bg-amber-100 flex items-center gap-2"
                 >
-                  Go to Settings
+                  <Phone size={16} />
+                  <span>Go to Settings</span>
                 </Button>
               </div>
             </AlertDescription>

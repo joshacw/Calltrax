@@ -1,8 +1,7 @@
 
 /**
  * Service for interacting with the Dialpad API
- * This is a mock implementation - in a real application, 
- * this would make actual API calls to Dialpad
+ * This is a real implementation that makes API calls to Dialpad
  */
 
 // Types for Dialpad service responses
@@ -42,12 +41,67 @@ export interface DialpadSubscription {
   created_at: string;
 }
 
+// Base Dialpad API URL
+const DIALPAD_API_BASE_URL = "https://api.dialpad.com/v2";
+
 // Get the Dialpad API token from localStorage
 const getDialpadApiToken = (): string => {
   return localStorage.getItem("dialpadApiToken") || "";
 };
 
-// Mock client creation in Dialpad
+// Helper function to make authenticated requests to Dialpad API
+const dialpadRequest = async <T>(
+  method: string,
+  endpoint: string,
+  body?: any,
+  retries = 3
+): Promise<T> => {
+  const apiToken = getDialpadApiToken();
+  if (!apiToken) {
+    throw new Error("Dialpad API token not found. Please set it in Settings > Integrations.");
+  }
+
+  const url = `${DIALPAD_API_BASE_URL}${endpoint}`;
+  
+  const options: RequestInit = {
+    method,
+    headers: {
+      "Authorization": `Bearer ${apiToken}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  };
+
+  try {
+    const response = await fetch(url, options);
+    
+    // Handle rate limiting (429) with exponential backoff
+    if (response.status === 429 && retries > 0) {
+      const retryAfter = parseInt(response.headers.get("Retry-After") || "1", 10);
+      console.log(`Rate limited. Retrying after ${retryAfter} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      return dialpadRequest<T>(method, endpoint, body, retries - 1);
+    }
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Dialpad API error (${response.status}): ${errorData.error || response.statusText}`);
+    }
+    
+    return await response.json() as T;
+  } catch (error) {
+    if (retries > 0 && (error instanceof TypeError || error.message.includes("network"))) {
+      // Network errors retry with exponential backoff
+      const delay = 2000 * Math.pow(2, 3 - retries);
+      console.log(`Network error. Retrying in ${delay}ms...`, error);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return dialpadRequest<T>(method, endpoint, body, retries - 1);
+    }
+    throw error;
+  }
+};
+
+// Create client in Dialpad by setting up all necessary components
 export const createDialpadClient = async (clientName: string): Promise<{
   channel: DialpadChannel;
   callCenter: DialpadCallCenter;
@@ -56,109 +110,149 @@ export const createDialpadClient = async (clientName: string): Promise<{
   hangupSubscription: DialpadSubscription;
   dispositionSubscription: DialpadSubscription;
 }> => {
-  // Check if API token exists
-  const apiToken = getDialpadApiToken();
-  if (!apiToken) {
-    throw new Error("Dialpad API token not found. Please set it in Settings > Integrations.");
+  try {
+    // Create a channel
+    const channel = await createDialpadChannel(clientName);
+    
+    // Create a call center
+    const callCenter = await createDialpadCallCenter(clientName, channel.id);
+    
+    // Create endpoints for webhooks
+    const hangupEndpoint = await createDialpadEndpoint(
+      `https://api.calltrax.com/webhooks/dialpad/hangup/${callCenter.id}`
+    );
+    
+    const dispositionEndpoint = await createDialpadEndpoint(
+      `https://api.calltrax.com/webhooks/dialpad/disposition/${callCenter.id}`
+    );
+    
+    // Setup event subscriptions
+    const hangupSubscription = await createDialpadSubscription(
+      callCenter.id,
+      ["hangup"],
+      hangupEndpoint.id
+    );
+    
+    const dispositionSubscription = await createDialpadSubscription(
+      callCenter.id,
+      ["disposition"],
+      dispositionEndpoint.id
+    );
+    
+    return {
+      channel,
+      callCenter,
+      hangupEndpoint,
+      dispositionEndpoint,
+      hangupSubscription,
+      dispositionSubscription
+    };
+  } catch (error) {
+    console.error("Error creating Dialpad client:", error);
+    throw new Error(`Failed to create Dialpad client: ${error.message}`);
   }
-  
-  // In a real implementation, this would make API calls to Dialpad using the token
-  
-  // Create a channel
-  const channel = await createDialpadChannel(clientName);
-  
-  // Create a call center
-  const callCenter = await createDialpadCallCenter(clientName, channel.id);
-  
-  // Create endpoints for webhooks
-  const hangupEndpoint = await createDialpadEndpoint(
-    `https://api.calltrax.com/webhooks/dialpad/hangup/${callCenter.id}`
-  );
-  
-  const dispositionEndpoint = await createDialpadEndpoint(
-    `https://api.calltrax.com/webhooks/dialpad/disposition/${callCenter.id}`
-  );
-  
-  // Setup event subscriptions
-  const hangupSubscription = await createDialpadSubscription(
-    callCenter.id,
-    ["hangup"],
-    hangupEndpoint.id
-  );
-  
-  const dispositionSubscription = await createDialpadSubscription(
-    callCenter.id,
-    ["disposition"],
-    dispositionEndpoint.id
-  );
-  
-  return {
-    channel,
-    callCenter,
-    hangupEndpoint,
-    dispositionEndpoint,
-    hangupSubscription,
-    dispositionSubscription
-  };
 };
 
-// Mock creating a channel in Dialpad
+// Create a channel in Dialpad
 const createDialpadChannel = async (name: string): Promise<DialpadChannel> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const response = await dialpadRequest<{ channel: DialpadChannel }>(
+    "POST",
+    "/channels",
+    {
+      name: `${name} Channel`,
+      description: `Channel for ${name} created by CallTrax`
+    }
+  );
   
-  // Return mock response
-  return {
-    id: `ch_${Math.random().toString(36).substring(2, 10)}`,
-    name: `${name} Channel`,
-    created_at: new Date().toISOString()
-  };
+  return response.channel;
 };
 
-// Mock creating a call center in Dialpad
+// Create a call center in Dialpad
 const createDialpadCallCenter = async (name: string, channelId: string): Promise<DialpadCallCenter> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const response = await dialpadRequest<{ call_center: DialpadCallCenter }>(
+    "POST",
+    "/call_centers",
+    {
+      name: `${name} Call Center`,
+      channel_id: channelId,
+      description: `Call center for ${name} created by CallTrax`
+    }
+  );
   
-  // Return mock response
-  return {
-    id: `cc_${Math.random().toString(36).substring(2, 10)}`,
-    name: `${name} Call Center`,
-    channel_id: channelId,
-    created_at: new Date().toISOString()
-  };
+  return response.call_center;
 };
 
-// Mock creating an endpoint in Dialpad
+// Create an endpoint in Dialpad
 const createDialpadEndpoint = async (url: string): Promise<DialpadEndpoint> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const response = await dialpadRequest<{ endpoint: DialpadEndpoint }>(
+    "POST",
+    "/endpoints",
+    {
+      url,
+      description: "CallTrax webhook endpoint"
+    }
+  );
   
-  // Return mock response
-  return {
-    id: `ep_${Math.random().toString(36).substring(2, 10)}`,
-    url,
-    created_at: new Date().toISOString()
-  };
+  return response.endpoint;
 };
 
-// Mock creating a subscription in Dialpad
+// Create a subscription in Dialpad
 const createDialpadSubscription = async (
   callCenterId: string,
   callStates: string[],
   endpointId: string
 ): Promise<DialpadSubscription> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const response = await dialpadRequest<{ subscription: DialpadSubscription }>(
+    "POST",
+    "/subscriptions",
+    {
+      enabled: true,
+      call_states: callStates,
+      endpoint_id: endpointId,
+      target_type: "callcenter",
+      target_id: callCenterId
+    }
+  );
   
-  // Return mock response
-  return {
-    id: `sub_${Math.random().toString(36).substring(2, 10)}`,
-    enabled: true,
-    call_states: callStates,
-    endpoint_id: endpointId,
-    target_type: "callcenter",
-    target_id: callCenterId,
-    created_at: new Date().toISOString()
-  };
+  return response.subscription;
+};
+
+// Get all channels for a Dialpad account
+export const getDialpadChannels = async (): Promise<DialpadChannel[]> => {
+  const response = await dialpadRequest<{ channels: DialpadChannel[] }>("GET", "/channels");
+  return response.channels;
+};
+
+// Get all call centers for a Dialpad account
+export const getDialpadCallCenters = async (): Promise<DialpadCallCenter[]> => {
+  const response = await dialpadRequest<{ call_centers: DialpadCallCenter[] }>("GET", "/call_centers");
+  return response.call_centers;
+};
+
+// Get a specific call center by ID
+export const getDialpadCallCenterById = async (id: string): Promise<DialpadCallCenter> => {
+  const response = await dialpadRequest<{ call_center: DialpadCallCenter }>("GET", `/call_centers/${id}`);
+  return response.call_center;
+};
+
+// Update a call center
+export const updateDialpadCallCenter = async (id: string, data: any): Promise<DialpadCallCenter> => {
+  const response = await dialpadRequest<{ call_center: DialpadCallCenter }>("PATCH", `/call_centers/${id}`, data);
+  return response.call_center;
+};
+
+// Delete a call center
+export const deleteDialpadCallCenter = async (id: string): Promise<void> => {
+  await dialpadRequest<void>("DELETE", `/call_centers/${id}`);
+};
+
+// Validate Dialpad API token
+export const validateDialpadApiToken = async (): Promise<boolean> => {
+  try {
+    await getDialpadChannels();
+    return true;
+  } catch (error) {
+    console.error("Dialpad API token validation failed:", error);
+    return false;
+  }
 };
