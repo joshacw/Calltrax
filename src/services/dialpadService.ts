@@ -1,4 +1,3 @@
-
 /**
  * Service for interacting with the Dialpad API
  * This is a real implementation that makes API calls to Dialpad
@@ -43,20 +42,11 @@ export interface DialpadSubscription {
 
 // Get the proper base URL for the proxy endpoint based on the environment
 const getProxyUrl = () => {
-  if (import.meta.env.PROD) {
-    // In production, use the current origin
-    return `${window.location.origin}/functions/v1/dialpad-proxy`;
-  } else {
-    // For local development
-    // If running with Supabase local dev server
-    const localSupabaseUrl = 'http://localhost:54321/functions/v1/dialpad-proxy';
-    
-    // Check if we can use the local Supabase URL by making a test request
-    return localSupabaseUrl;
-  }
+  // Always use the production Supabase URL
+  return 'https://kjpbwdyyhqgwkzuymzer.supabase.co/functions/v1/dialpad-proxy';
 };
 
-// Base URL for the proxy endpoint - dynamic based on environment
+// Base URL for the proxy endpoint
 const PROXY_URL = getProxyUrl();
 
 // Get the Dialpad API token from localStorage
