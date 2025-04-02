@@ -6,7 +6,7 @@ import { Call, FilterOptions } from "@/types";
 import { useEffect, useState } from "react";
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Phone } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const CallsPage = () => {
