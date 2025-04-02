@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { DashboardMetrics } from "@/types";
@@ -64,10 +65,6 @@ const PublicDashboard = () => {
           title="Number of Appointments" 
           value={metrics.numberOfAppointments} 
         />
-      </div>
-      
-      <div className="text-center text-xs text-muted-foreground mt-8">
-        <p>Powered by CallTrax</p>
       </div>
     </div>
   );
