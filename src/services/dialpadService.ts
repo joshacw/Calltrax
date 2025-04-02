@@ -1,3 +1,4 @@
+
 /**
  * Service for interacting with the Dialpad API
  * This is a real implementation that makes API calls to Dialpad
@@ -40,15 +41,17 @@ export interface DialpadSubscription {
   created_at: string;
 }
 
-// Base Dialpad API URL
-const DIALPAD_API_BASE_URL = "https://api.dialpad.com/v2";
+// Base URL for the proxy endpoint
+const PROXY_URL = import.meta.env.PROD 
+  ? `${window.location.origin}/functions/v1/dialpad-proxy`
+  : "http://localhost:54321/functions/v1/dialpad-proxy";
 
 // Get the Dialpad API token from localStorage
 const getDialpadApiToken = (): string => {
   return localStorage.getItem("dialpadApiToken") || "";
 };
 
-// Helper function to make authenticated requests to Dialpad API
+// Helper function to make authenticated requests to Dialpad API through our proxy
 const dialpadRequest = async <T>(
   method: string,
   endpoint: string,
@@ -59,46 +62,39 @@ const dialpadRequest = async <T>(
   if (!apiToken) {
     throw new Error("Dialpad API token not found. Please set it in Settings > Integrations.");
   }
-
-  const url = `${DIALPAD_API_BASE_URL}${endpoint}`;
   
-  const options: RequestInit = {
-    method,
-    headers: {
-      "Authorization": `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    },
-    mode: "cors",
-    body: body ? JSON.stringify(body) : undefined,
-  };
-
   try {
-    console.log(`Making ${method} request to Dialpad API: ${url}`);
-    const response = await fetch(url, options);
+    console.log(`Making ${method} request to Dialpad API: ${endpoint}`);
     
-    // Handle rate limiting (429) with exponential backoff
-    if (response.status === 429 && retries > 0) {
-      const retryAfter = parseInt(response.headers.get("Retry-After") || "1", 10);
-      console.log(`Rate limited. Retrying after ${retryAfter} seconds...`);
-      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      return dialpadRequest<T>(method, endpoint, body, retries - 1);
-    }
+    const response = await fetch(PROXY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        method,
+        endpoint,
+        token: apiToken,
+        body,
+      }),
+    });
     
     if (!response.ok) {
-      // Try to get error details from response
-      let errorMessage = response.statusText;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch (e) {
-        // If we can't parse JSON, just use the status text
-      }
+      const errorData = await response.json();
+      const errorMessage = errorData.error || response.statusText;
       console.error(`Dialpad API error (${response.status}): ${errorMessage}`);
       throw new Error(`Dialpad API error (${response.status}): ${errorMessage}`);
     }
     
-    return await response.json() as T;
+    const result = await response.json();
+    
+    // If the proxied request had an error status, throw it
+    if (result.status >= 400) {
+      console.error(`Dialpad API error (${result.status}): ${result.statusText}`);
+      throw new Error(`Dialpad API error (${result.status}): ${result.statusText || 'Unknown error'}`);
+    }
+    
+    return result.data as T;
   } catch (error) {
     console.error("Dialpad API request error:", error);
     
@@ -272,7 +268,7 @@ export const deleteDialpadCallCenter = async (id: string): Promise<void> => {
   await dialpadRequest<void>("DELETE", `/call_centers/${id}`);
 };
 
-// Test connection to Dialpad API - improved version
+// Test connection to Dialpad API through our proxy
 export const testDialpadConnection = async (token: string): Promise<boolean> => {
   try {
     console.log("Testing Dialpad connection with token:", token ? "Token provided" : "No token");
@@ -281,25 +277,25 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       return false;
     }
     
-    // Use a direct fetch request to verify the token
-    const testEndpoint = "/channels?limit=1";
-    const url = `${DIALPAD_API_BASE_URL}${testEndpoint}`;
-    
-    const response = await fetch(url, {
-      method: "GET",
+    // Use our proxy endpoint to test the connection
+    const response = await fetch(PROXY_URL, {
+      method: "POST",
       headers: {
-        "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
-        "Accept": "application/json",
       },
-      mode: "cors",
+      body: JSON.stringify({
+        method: "GET",
+        endpoint: "/channels?limit=1",
+        token: token
+      }),
     });
     
-    console.log("Dialpad test connection response:", response.status, response.statusText);
+    // Parse the response
+    const result = await response.json();
+    console.log("Dialpad test connection response:", result.status, result.statusText);
     
-    // If we get any response other than 401, the token is valid
-    // 401 specifically means invalid credentials
-    if (response.status === 401) {
+    // If the proxied request returns 401, the token is invalid
+    if (result.status === 401) {
       console.error("Invalid Dialpad API token (401 Unauthorized)");
       return false;
     }
@@ -307,13 +303,12 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
     return true;
   } catch (error) {
     console.error("Failed to test Dialpad connection:", error);
-    // For network errors, consider the token potentially valid
-    // The issue might be with CORS or network connectivity, not the token
-    return error instanceof TypeError && error.message.includes("Failed to fetch");
+    // For network errors to our proxy, consider it a temporary issue, not a token issue
+    return false;
   }
 };
 
-// Validate Dialpad API token - improved version
+// Validate Dialpad API token
 export const validateDialpadApiToken = async (): Promise<boolean> => {
   try {
     const token = getDialpadApiToken();
