@@ -14,6 +14,9 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   
+  // Get today's index in the data array
+  const todayIndex = chartData.findIndex(item => item.date === todayStr);
+  
   return (
     <div className="w-full h-80">
       <ResponsiveContainer width="100%" height="100%">
@@ -43,6 +46,8 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
             strokeDasharray="3 3" 
             label={{ value: "Today", position: "top" }} 
           />
+          
+          {/* Historical data (solid with fill) */}
           <Area 
             type="monotone" 
             dataKey="leads" 
@@ -50,6 +55,9 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
             stroke="#ff8042" 
             fill="#ff8042" 
             fillOpacity={0.6}
+            activeDot={{ r: 8 }}
+            isAnimationActive={false}
+            connectNulls
           />
           <Area 
             type="monotone" 
@@ -58,6 +66,9 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
             stroke="#8884d8" 
             fill="#8884d8" 
             fillOpacity={0.6}
+            activeDot={{ r: 8 }}
+            isAnimationActive={false}
+            connectNulls
           />
           <Area 
             type="monotone" 
@@ -66,6 +77,9 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
             stroke="#82ca9d" 
             fill="#82ca9d" 
             fillOpacity={0.6}
+            activeDot={{ r: 8 }}
+            isAnimationActive={false}
+            connectNulls
           />
           <Area 
             type="monotone" 
@@ -74,7 +88,64 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
             stroke="#ffc658" 
             fill="#ffc658" 
             fillOpacity={0.6}
+            activeDot={{ r: 8 }}
+            isAnimationActive={false}
+            connectNulls
           />
+          
+          {/* Projected data (dotted lines, no fill) */}
+          {todayIndex !== -1 && (
+            <>
+              <Area 
+                type="monotone" 
+                dataKey="leadsProjected" 
+                name="Leads (Projected)" 
+                stroke="#ff8042" 
+                strokeDasharray="5 5"
+                fill="none"
+                connectNulls
+                isAnimationActive={false}
+                activeDot={{ r: 6 }}
+                dot={{ strokeWidth: 2 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="callsProjected" 
+                name="Calls (Projected)" 
+                stroke="#8884d8" 
+                strokeDasharray="5 5"
+                fill="none"
+                connectNulls
+                isAnimationActive={false}
+                activeDot={{ r: 6 }}
+                dot={{ strokeWidth: 2 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="connectionsProjected" 
+                name="Connections (Projected)" 
+                stroke="#82ca9d" 
+                strokeDasharray="5 5"
+                fill="none"
+                connectNulls
+                isAnimationActive={false}
+                activeDot={{ r: 6 }}
+                dot={{ strokeWidth: 2 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="appointmentsProjected" 
+                name="Appointments (Projected)" 
+                stroke="#ffc658" 
+                strokeDasharray="5 5"
+                fill="none"
+                connectNulls
+                isAnimationActive={false}
+                activeDot={{ r: 6 }}
+                dot={{ strokeWidth: 2 }}
+              />
+            </>
+          )}
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -104,26 +175,47 @@ const getWeekToDateData = (): GraphDataPoint[] => {
     { leads: 0.85, calls: 0.9, connections: 0.85, appointments: 0.85 }   // Friday
   ];
   
-  // Projection factor (values get less certain for future days)
-  const projectionStyles = (dayDate: Date) => {
-    const isProjected = isAfter(dayDate, today);
-    return isProjected ? "dashed" : "solid";
-  };
-  
   // Generate data for each weekday (Mon-Fri)
   for (let i = 0; i < 5; i++) {
     const currentDate = addDays(startOfCurrentWeek, i);
     const variation = dailyVariations[i];
+    const isPastToday = isAfter(currentDate, today);
     
-    const dayData: GraphDataPoint = {
-      date: format(currentDate, 'yyyy-MM-dd'),
-      leads: Math.round(dailyBenchmarks.leads * variation.leads),
-      calls: Math.round(dailyBenchmarks.calls * variation.calls),
-      connections: Math.round(dailyBenchmarks.connections * variation.connections),
-      appointments: Math.round(dailyBenchmarks.appointments * variation.appointments)
-    };
+    // Calculate actual/projected values
+    const leads = Math.round(dailyBenchmarks.leads * variation.leads);
+    const calls = Math.round(dailyBenchmarks.calls * variation.calls);
+    const connections = Math.round(dailyBenchmarks.connections * variation.connections);
+    const appointments = Math.round(dailyBenchmarks.appointments * variation.appointments);
     
-    data.push(dayData);
+    const dateStr = format(currentDate, 'yyyy-MM-dd');
+    
+    if (isPastToday) {
+      // For projected dates (after today), use separate properties with null for actual
+      data.push({
+        date: dateStr,
+        leads: null,
+        calls: null,
+        connections: null,
+        appointments: null,
+        leadsProjected: leads,
+        callsProjected: calls,
+        connectionsProjected: connections,
+        appointmentsProjected: appointments
+      } as any); // Using 'as any' temporarily until we update the GraphDataPoint type
+    } else {
+      // For past dates (up to today), use actual values and null for projected
+      data.push({
+        date: dateStr,
+        leads: leads,
+        calls: calls,
+        connections: connections,
+        appointments: appointments,
+        leadsProjected: null,
+        callsProjected: null,
+        connectionsProjected: null,
+        appointmentsProjected: null
+      } as any); // Using 'as any' temporarily until we update the GraphDataPoint type
+    }
   }
   
   return data;

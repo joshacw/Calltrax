@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -86,10 +87,14 @@ export interface PerformanceKPIs {
 
 export interface GraphDataPoint {
   date: string;
-  calls: number;
-  connections: number;
-  appointments: number;
-  leads: number;
+  calls: number | null;
+  connections: number | null;
+  appointments: number | null;
+  leads: number | null;
+  callsProjected?: number | null;
+  connectionsProjected?: number | null;
+  appointmentsProjected?: number | null;
+  leadsProjected?: number | null;
 }
 
 export interface FilterOptions {

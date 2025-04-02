@@ -1,4 +1,4 @@
-import { Agency, Call, Client, DashboardMetrics, Lead, SubAccount, User } from "@/types";
+import { Agency, Call, Client, DashboardMetrics, GraphDataPoint, Lead, SubAccount, User } from "@/types";
 
 // Mock Users
 export const users: User[] = [
@@ -270,16 +270,43 @@ const getWeekToDateData = (): GraphDataPoint[] => {
     const currentDate = new Date(startOfCurrentWeek);
     currentDate.setDate(startOfCurrentWeek.getDate() + i);
     const variation = dailyVariations[i];
+    const isPastToday = currentDate > today;
     
-    const dayData: GraphDataPoint = {
-      date: currentDate.toISOString().split('T')[0],
-      leads: Math.round(dailyBenchmarks.leads * variation.leads),
-      calls: Math.round(dailyBenchmarks.calls * variation.calls),
-      connections: Math.round(dailyBenchmarks.connections * variation.connections),
-      appointments: Math.round(dailyBenchmarks.appointments * variation.appointments)
-    };
+    // Calculate actual/projected values
+    const leads = Math.round(dailyBenchmarks.leads * variation.leads);
+    const calls = Math.round(dailyBenchmarks.calls * variation.calls);
+    const connections = Math.round(dailyBenchmarks.connections * variation.connections);
+    const appointments = Math.round(dailyBenchmarks.appointments * variation.appointments);
     
-    data.push(dayData);
+    const dateStr = currentDate.toISOString().split('T')[0];
+    
+    if (isPastToday) {
+      // For projected dates (after today)
+      data.push({
+        date: dateStr,
+        leads: null,
+        calls: null,
+        connections: null,
+        appointments: null,
+        leadsProjected: leads,
+        callsProjected: calls,
+        connectionsProjected: connections,
+        appointmentsProjected: appointments
+      });
+    } else {
+      // For past dates (up to today)
+      data.push({
+        date: dateStr,
+        leads: leads,
+        calls: calls,
+        connections: connections,
+        appointments: appointments,
+        leadsProjected: null,
+        callsProjected: null,
+        connectionsProjected: null,
+        appointmentsProjected: null
+      });
+    }
   }
   
   return data;
