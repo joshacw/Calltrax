@@ -66,7 +66,7 @@ const dialpadRequest = async <T>(
   try {
     console.log(`Making ${method} request to Dialpad API: ${endpoint}`);
     
-    const response = await fetch(PROXY_URL, {
+    const response = await fetch(`${PROXY_URL}?debug=true`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +82,7 @@ const dialpadRequest = async <T>(
     if (!response.ok) {
       const errorData = await response.json();
       const errorMessage = errorData.error || response.statusText;
-      console.error(`Dialpad API error (${response.status}): ${errorMessage}`);
+      console.error(`Dialpad API error (${response.status}): ${errorMessage}`, errorData);
       throw new Error(`Dialpad API error (${response.status}): ${errorMessage}`);
     }
     
@@ -90,7 +90,7 @@ const dialpadRequest = async <T>(
     
     // If the proxied request had an error status, throw it
     if (result.status >= 400) {
-      console.error(`Dialpad API error (${result.status}): ${result.statusText}`);
+      console.error(`Dialpad API error (${result.status}): ${result.statusText}`, result);
       throw new Error(`Dialpad API error (${result.status}): ${result.statusText || 'Unknown error'}`);
     }
     
@@ -310,6 +310,13 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
     // Check for non-JSON responses which might indicate an issue
     if (result.data && result.data._nonJson) {
       console.error("Received non-JSON response from Dialpad API:", result.data.text);
+      console.error("Content type:", result.data.contentType);
+      // Check if this looks like a rate limiting or temporary issue
+      if (result.data.text.includes("rate limit") || 
+          result.data.text.includes("too many requests") ||
+          result.status === 429) {
+        console.warn("Dialpad API rate limiting detected. Try again later.");
+      }
       return false;
     }
     

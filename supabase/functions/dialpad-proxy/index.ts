@@ -61,13 +61,32 @@ serve(async (req) => {
       options.body = JSON.stringify(requestBody);
     }
 
+    // Add additional timeout and retry logic
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     try {
-      const response = await fetch(targetUrl, options);
-      let responseData;
+      options.signal = controller.signal;
       
+      if (debug) console.log("Sending request to Dialpad with options:", {
+        method: options.method,
+        headers: { ...options.headers, Authorization: "Bearer [REDACTED]" },
+        body: options.body ? JSON.parse(options.body) : undefined
+      });
+      
+      const response = await fetch(targetUrl, options);
+      clearTimeout(timeoutId); // Clear the timeout now that we have a response
+      
+      let responseData;
       const contentType = response.headers.get("content-type");
+      
+      if (debug) console.log(`Received response from Dialpad API: ${response.status} ${response.statusText}`);
+      if (debug) console.log(`Response content-type: ${contentType}`);
+      
       if (contentType && contentType.includes("application/json")) {
         responseData = await response.json();
+        if (debug) console.log("JSON response body sample:", 
+          JSON.stringify(responseData).substring(0, 200) + "...");
       } else {
         // Handle non-JSON responses gracefully
         const text = await response.text();
@@ -75,16 +94,18 @@ serve(async (req) => {
         
         responseData = { 
           _nonJson: true, 
-          text: text.substring(0, 1000) // Truncate long responses
+          text: text.substring(0, 2000), // Increase truncation limit for better debugging
+          contentType: contentType || "unknown"
         };
       }
       
-      // Return the response with appropriate status code
+      // Include more detailed information in the response
       return new Response(
         JSON.stringify({
           status: response.status,
           statusText: response.statusText,
           data: responseData,
+          headers: Object.fromEntries([...response.headers.entries()]),
         }),
         {
           status: 200, // Always return 200 from our proxy, with actual status in the body
@@ -92,15 +113,34 @@ serve(async (req) => {
         }
       );
     } catch (fetchError) {
-      if (debug) console.error("Fetch error:", fetchError);
+      clearTimeout(timeoutId);
+      
+      if (debug) {
+        console.error("Fetch error details:", {
+          name: fetchError.name,
+          message: fetchError.message,
+          cause: fetchError.cause,
+          stack: fetchError.stack
+        });
+      }
+      
+      let errorCode = 500;
+      let errorMessage = "Failed to fetch from Dialpad API";
+      
+      if (fetchError.name === "AbortError") {
+        errorCode = 408; // Request Timeout
+        errorMessage = "Request to Dialpad API timed out after 15 seconds";
+      }
       
       return new Response(
         JSON.stringify({ 
-          error: "Failed to fetch from Dialpad API", 
-          details: fetchError.message 
+          error: errorMessage, 
+          details: fetchError.message,
+          name: fetchError.name,
+          isTimeout: fetchError.name === "AbortError"
         }),
         {
-          status: 500,
+          status: errorCode,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -108,7 +148,11 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in dialpad-proxy:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error" }),
+      JSON.stringify({ 
+        error: error.message || "Unknown error",
+        stack: error.stack, // Include stack trace for better debugging
+        name: error.name
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
