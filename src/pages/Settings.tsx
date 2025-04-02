@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, LineChart, Phone, WebhookIcon } from "lucide-react";
+import { Save, LineChart, Phone, WebhookIcon, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { validateDialpadApiToken } from "@/services/dialpadService";
+import { validateDialpadApiToken, testDialpadConnection } from "@/services/dialpadService";
 import { DialpadCallCenters } from "@/components/DialpadCallCenters";
+import { Progress } from "@/components/ui/progress";
 
 const SettingsPage = () => {
   const [dialpadApiToken, setDialpadApiToken] = useState(() => {
@@ -18,6 +19,7 @@ const SettingsPage = () => {
   });
   
   const [dialpadTokenValid, setDialpadTokenValid] = useState<boolean | null>(null);
+  const [dialpadValidationStatus, setDialpadValidationStatus] = useState<"idle" | "validating" | "success" | "error">("idle");
   const [showCallCenters, setShowCallCenters] = useState(false);
   
   const [webhookUrl, setWebhookUrl] = useState(() => {
@@ -38,22 +40,41 @@ const SettingsPage = () => {
   });
   
   const [isSaving, setIsSaving] = useState(false);
+  const [verificationProgress, setVerificationProgress] = useState(0);
   
-  // Check if the Dialpad token is valid on component mount
   useEffect(() => {
     const checkToken = async () => {
       if (dialpadApiToken) {
         try {
+          setDialpadValidationStatus("validating");
+          
+          const progressInterval = setInterval(() => {
+            setVerificationProgress(prev => {
+              if (prev >= 90) {
+                clearInterval(progressInterval);
+                return prev;
+              }
+              return prev + 10;
+            });
+          }, 300);
+          
           const isValid = await validateDialpadApiToken();
+          clearInterval(progressInterval);
+          setVerificationProgress(100);
+          
           setDialpadTokenValid(isValid);
+          setDialpadValidationStatus(isValid ? "success" : "error");
           setShowCallCenters(isValid);
         } catch (error) {
           console.error("Error validating Dialpad token:", error);
           setDialpadTokenValid(false);
+          setDialpadValidationStatus("error");
           setShowCallCenters(false);
+          setVerificationProgress(100);
         }
       } else {
         setDialpadTokenValid(null);
+        setDialpadValidationStatus("idle");
         setShowCallCenters(false);
       }
     };
@@ -63,28 +84,57 @@ const SettingsPage = () => {
 
   const handleSaveDialpadToken = async () => {
     setIsSaving(true);
+    setDialpadValidationStatus("validating");
+    setVerificationProgress(0);
     
     try {
-      localStorage.setItem("dialpadApiToken", dialpadApiToken);
+      const progressInterval = setInterval(() => {
+        setVerificationProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 300);
       
-      if (dialpadApiToken) {
-        const isValid = await validateDialpadApiToken();
-        setDialpadTokenValid(isValid);
+      const isValid = await testDialpadConnection(dialpadApiToken);
+      
+      if (isValid) {
+        localStorage.setItem("dialpadApiToken", dialpadApiToken);
+        clearInterval(progressInterval);
+        setVerificationProgress(100);
         
-        if (isValid) {
-          toast.success("Dialpad API token saved and verified successfully");
-          setShowCallCenters(true);
-        } else {
-          toast.error("Dialpad API token saved but could not be verified. Please check the token.");
-          setShowCallCenters(false);
-        }
+        setDialpadTokenValid(true);
+        setDialpadValidationStatus("success");
+        setShowCallCenters(true);
+        
+        toast.success("Dialpad API token verified and saved successfully", {
+          description: "Your Dialpad integration is now connected and ready to use."
+        });
       } else {
-        setDialpadTokenValid(null);
+        clearInterval(progressInterval);
+        setVerificationProgress(100);
+        
+        setDialpadTokenValid(false);
+        setDialpadValidationStatus("error");
         setShowCallCenters(false);
-        toast.success("Dialpad API token cleared");
+        
+        if (dialpadApiToken) {
+          toast.error("Invalid Dialpad API token", {
+            description: "The token couldn't be verified. Please check your token and try again."
+          });
+        } else {
+          localStorage.removeItem("dialpadApiToken");
+          setDialpadTokenValid(null);
+          setDialpadValidationStatus("idle");
+          toast.success("Dialpad API token cleared");
+        }
       }
     } catch (error) {
       console.error("Error saving or validating Dialpad token:", error);
+      setDialpadValidationStatus("error");
+      setVerificationProgress(100);
       toast.error(`Error: ${error.message}`);
       setShowCallCenters(false);
     } finally {
@@ -95,7 +145,6 @@ const SettingsPage = () => {
   const handleSetupDialpad = () => {
     setIsSaving(true);
     
-    // Simulate API call to setup Dialpad
     setTimeout(() => {
       toast.success("Dialpad integration configured successfully", {
         description: "Call center, channel, and webhooks have been set up"
@@ -105,14 +154,12 @@ const SettingsPage = () => {
   };
   
   const handleAgenciesCreated = () => {
-    // Refresh data or perform any action needed after agencies are created
     toast.success("Agencies created successfully");
   };
   
   const handleSaveKpiSettings = () => {
     setIsSaving(true);
     
-    // Simulate API call
     setTimeout(() => {
       localStorage.setItem("kpiSettings", JSON.stringify(kpiSettings));
       setIsSaving(false);
@@ -123,7 +170,6 @@ const SettingsPage = () => {
   const handleSaveColorSettings = () => {
     setIsSaving(true);
     
-    // Simulate API call
     setTimeout(() => {
       localStorage.setItem("colorSettings", JSON.stringify(colorSettings));
       setIsSaving(false);
@@ -136,6 +182,46 @@ const SettingsPage = () => {
     setWebhookUrl(newWebhookUrl);
     navigator.clipboard.writeText(newWebhookUrl);
     toast.success("New webhook URL generated and copied to clipboard");
+  };
+
+  const renderDialpadConnectionStatus = () => {
+    if (dialpadValidationStatus === "idle") {
+      return null;
+    }
+    
+    if (dialpadValidationStatus === "validating") {
+      return (
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <span>Verifying Dialpad connection...</span>
+          </div>
+          <Progress value={verificationProgress} className="h-2" />
+        </div>
+      );
+    }
+    
+    return (
+      <div className={`mt-4 p-4 rounded-md border ${
+        dialpadValidationStatus === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"
+      }`}>
+        <div className="flex items-center gap-2">
+          {dialpadValidationStatus === "success" ? (
+            <CheckCircle className="h-5 w-5 text-green-500" />
+          ) : (
+            <AlertCircle className="h-5 w-5 text-red-500" />
+          )}
+          <h3 className="text-sm font-medium">
+            {dialpadValidationStatus === "success" ? "Dialpad Connected" : "Connection Failed"}
+          </h3>
+        </div>
+        <p className="text-sm mt-1 ml-7">
+          {dialpadValidationStatus === "success" 
+            ? "Your Dialpad API token is valid and the connection is working properly." 
+            : "The Dialpad API token is invalid or the service might be unavailable. Please check your token and try again."}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -179,33 +265,46 @@ const SettingsPage = () => {
                     placeholder="Enter your Dialpad API token" 
                     value={dialpadApiToken}
                     onChange={(e) => setDialpadApiToken(e.target.value)}
+                    className={dialpadValidationStatus === "success" ? "border-green-500 focus-visible:ring-green-500" : ""}
                   />
                   <p className="text-xs text-muted-foreground">
                     You can find your API token in the Dialpad developer console.
                   </p>
                 </div>
                 
+                {renderDialpadConnectionStatus()}
+                
                 <div className="flex gap-3">
                   <Button 
                     onClick={handleSaveDialpadToken} 
-                    disabled={isSaving}
+                    disabled={isSaving || dialpadValidationStatus === "validating"}
                     className="flex items-center gap-2"
                   >
-                    {isSaving ? "Saving..." : (
+                    {isSaving || dialpadValidationStatus === "validating" ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
                       <>
                         <Save size={16} />
-                        <span>Save API Token</span>
+                        <span>Save & Verify API Token</span>
                       </>
                     )}
                   </Button>
                   
                   <Button 
                     onClick={handleSetupDialpad}
-                    disabled={!dialpadTokenValid || isSaving}
+                    disabled={!dialpadTokenValid || isSaving || dialpadValidationStatus === "validating"}
                     variant="outline"
                     className="flex items-center gap-2"
                   >
-                    {isSaving ? "Setting up..." : (
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Setting up...</span>
+                      </>
+                    ) : (
                       <>
                         <Phone size={16} />
                         <span>Setup Dialpad Integration</span>
@@ -214,53 +313,36 @@ const SettingsPage = () => {
                   </Button>
                 </div>
                 
-                {dialpadTokenValid !== null && (
-                  <div className={`mt-4 p-4 rounded-md border ${
-                    dialpadTokenValid ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-                  }`}>
-                    <h3 className="text-sm font-medium mb-2">
-                      {dialpadTokenValid 
-                        ? "Dialpad API Token Valid" 
-                        : "Dialpad API Token Invalid"}
-                    </h3>
-                    <p className="text-sm">
-                      {dialpadTokenValid 
-                        ? "Your Dialpad API token is valid and working properly." 
-                        : "Your Dialpad API token is invalid. Please check and update it."}
-                    </p>
+                {dialpadValidationStatus === "success" && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                    <h3 className="text-sm font-medium mb-2 text-green-800">Integration Status</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                        <span className="text-green-800">Dialpad API Connected</span>
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                        <span className="text-green-800">Dialpad Channel Setup Complete</span>
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                        <span className="text-green-800">Dialpad Call Center Created</span>
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                        <span className="text-green-800">Hangup Event Webhook Configured</span>
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                        <span className="text-green-800">Disposition Event Webhook Configured</span>
+                      </li>
+                    </ul>
                   </div>
                 )}
                 
                 {showCallCenters && dialpadTokenValid && (
                   <DialpadCallCenters onCreateAgencies={handleAgenciesCreated} />
-                )}
-                
-                {dialpadTokenValid && (
-                  <div className="mt-4 p-4 bg-muted rounded-md">
-                    <h3 className="text-sm font-medium mb-2">Integration Status</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-center">
-                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                        Dialpad API Connected
-                      </li>
-                      <li className="flex items-center">
-                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                        Dialpad Channel Setup Complete
-                      </li>
-                      <li className="flex items-center">
-                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                        Dialpad Call Center Created
-                      </li>
-                      <li className="flex items-center">
-                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                        Hangup Event Webhook Configured
-                      </li>
-                      <li className="flex items-center">
-                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                        Disposition Event Webhook Configured
-                      </li>
-                    </ul>
-                  </div>
                 )}
               </CardContent>
             </Card>
@@ -504,7 +586,6 @@ const SettingsPage = () => {
   );
 };
 
-// Protect this route for admin users only
 const ProtectedSettingsPage = () => (
   <ProtectedRoute allowedRoles={["admin"]}>
     <SettingsPage />

@@ -73,6 +73,7 @@ const dialpadRequest = async <T>(
   };
 
   try {
+    console.log(`Making ${method} request to Dialpad API: ${url}`);
     const response = await fetch(url, options);
     
     // Handle rate limiting (429) with exponential backoff
@@ -85,12 +86,16 @@ const dialpadRequest = async <T>(
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Dialpad API error (${response.status}): ${errorData.error || response.statusText}`);
+      const errorMessage = errorData.error || response.statusText;
+      console.error(`Dialpad API error (${response.status}): ${errorMessage}`);
+      throw new Error(`Dialpad API error (${response.status}): ${errorMessage}`);
     }
     
     return await response.json() as T;
   } catch (error) {
-    if (retries > 0 && (error instanceof TypeError || error.message.includes("network"))) {
+    console.error("Dialpad API request error:", error);
+    
+    if (retries > 0 && (error instanceof TypeError || (error.message && error.message.includes("network") || error.message.includes("fetch")))) {
       // Network errors retry with exponential backoff
       const delay = 2000 * Math.pow(2, 3 - retries);
       console.log(`Network error. Retrying in ${delay}ms...`, error);
@@ -260,10 +265,49 @@ export const deleteDialpadCallCenter = async (id: string): Promise<void> => {
   await dialpadRequest<void>("DELETE", `/call_centers/${id}`);
 };
 
+// Test connection to Dialpad API
+export const testDialpadConnection = async (token: string): Promise<boolean> => {
+  try {
+    console.log("Testing Dialpad connection with token:", token ? "Token provided" : "No token");
+    
+    // Store the token temporarily for the test
+    const originalToken = localStorage.getItem("dialpadApiToken");
+    localStorage.setItem("dialpadApiToken", token);
+    
+    // Make a simple request to verify the token
+    const testEndpoint = "/channels?limit=1";
+    const url = `${DIALPAD_API_BASE_URL}${testEndpoint}`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    
+    // Restore the original token
+    if (originalToken) {
+      localStorage.setItem("dialpadApiToken", originalToken);
+    } else {
+      localStorage.removeItem("dialpadApiToken");
+    }
+    
+    console.log("Dialpad test connection response:", response.status, response.statusText);
+    
+    return response.ok;
+  } catch (error) {
+    console.error("Failed to test Dialpad connection:", error);
+    return false;
+  }
+};
+
 // Validate Dialpad API token
 export const validateDialpadApiToken = async (): Promise<boolean> => {
   try {
+    console.log("Validating Dialpad API token...");
     await getDialpadChannels();
+    console.log("Dialpad API token is valid");
     return true;
   } catch (error) {
     console.error("Dialpad API token validation failed:", error);
