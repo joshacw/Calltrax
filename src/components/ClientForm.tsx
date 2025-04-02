@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -38,8 +37,17 @@ interface StepStatus {
 }
 
 interface ClientFormProps {
-  onSuccess?: (clientName: string) => void;
+  onSuccess?: (clientName: string, clientId: string, webhookUrl: string) => void;
 }
+
+// Function to generate a unique webhook URL
+const generateWebhookUrl = () => {
+  // Generate a random string for the webhook ID
+  const webhookId = Math.random().toString(36).substring(2, 15) + 
+                   Math.random().toString(36).substring(2, 15);
+  // Return the full webhook URL
+  return `${window.location.origin}/api/webhooks/lead/${webhookId}`;
+};
 
 export const ClientForm = ({ onSuccess }: ClientFormProps) => {
   const navigate = useNavigate();
@@ -54,6 +62,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
     setupHangupSubscription: { status: "pending", message: "Setup subscription for hangup events" },
     setupDispositionSubscription: { status: "pending", message: "Setup subscription for disposition events" },
     saveClientToDatabase: { status: "pending", message: "Save client information to database" },
+    createWebhook: { status: "pending", message: "Create inbound lead webhook" },
   });
   
   const form = useForm<ClientFormValues>({
@@ -86,7 +95,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
     checkApiToken();
   });
 
-  const saveClientToDatabase = async (name: string, dialpadData: any): Promise<string> => {
+  const saveClientToDatabase = async (name: string, dialpadData: any): Promise<{clientId: string, webhookUrl: string}> => {
     try {
       updateStep("saveClientToDatabase", "loading");
       
@@ -131,11 +140,32 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         if (agencyError) throw agencyError;
       }
       
+      // Create inbound webhook
+      updateStep("createWebhook", "loading");
+      const webhookUrl = generateWebhookUrl();
+      const webhookId = webhookUrl.split('/').pop();
+      
+      const { error: webhookError } = await supabase
+        .from('webhooks')
+        .insert({
+          client_id: clientData.id,
+          type: 'lead',
+          url: webhookUrl,
+          secret: webhookId,
+          active: true,
+        });
+        
+      if (webhookError) throw webhookError;
+      
+      updateStep("createWebhook", "completed");
       updateStep("saveClientToDatabase", "completed");
-      return clientData.id;
+      return { clientId: clientData.id, webhookUrl };
     } catch (error) {
       console.error("Error saving client to database:", error);
       updateStep("saveClientToDatabase", "error", `Database error: ${error.message}`);
+      if (steps.createWebhook.status === "loading") {
+        updateStep("createWebhook", "error", `Webhook error: ${error.message}`);
+      }
       throw error;
     }
   };
@@ -169,14 +199,14 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         updateStep("setupHangupSubscription", "completed");
         updateStep("setupDispositionSubscription", "completed");
         
-        // Save client information to database
-        await saveClientToDatabase(data.name, dialpadResult);
+        // Save client information to database and create webhook
+        const { clientId, webhookUrl } = await saveClientToDatabase(data.name, dialpadResult);
         
-        toast.success(`Client ${data.name} has been created with all Dialpad integrations.`);
+        toast.success(`Client ${data.name} has been created with all integrations.`);
         form.reset();
         
         if (onSuccess) {
-          onSuccess(data.name);
+          onSuccess(data.name, clientId, webhookUrl);
         }
       } catch (error) {
         console.error("Error during Dialpad integration:", error);
