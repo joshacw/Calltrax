@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -29,7 +28,6 @@ const SettingsPage = () => {
     return localStorage.getItem("webhookUrl") || `${window.location.origin}/api/webhooks/leads/${Math.random().toString(36).substring(2, 10)}`;
   });
   
-  // Initialize KPI settings from localStorage or with defaults
   const [kpiSettings, setKpiSettings] = useState(() => {
     const savedSettings = localStorage.getItem("kpiSettings");
     return savedSettings ? JSON.parse(savedSettings) : {
@@ -40,7 +38,6 @@ const SettingsPage = () => {
     };
   });
   
-  // Initialize color settings from localStorage or with defaults
   const [colorSettings, setColorSettings] = useState(() => {
     const savedColors = localStorage.getItem("colorSettings");
     return savedColors ? JSON.parse(savedColors) : {
@@ -76,7 +73,7 @@ const SettingsPage = () => {
           setShowCallCenters(isValid);
           
           if (!isValid) {
-            setErrorMessage("The token could not be verified. The API might be unavailable or there could be a network issue.");
+            setErrorMessage("The token could not be verified. Please check the token format and try again. For debugging purposes, also check the console logs.");
           }
         } catch (error) {
           console.error("Error validating Dialpad token:", error);
@@ -84,7 +81,7 @@ const SettingsPage = () => {
           setDialpadValidationStatus("error");
           setShowCallCenters(false);
           setVerificationProgress(100);
-          setErrorMessage(error.message || "Unknown error validating token");
+          setErrorMessage(error.message || "Unknown error validating token. For debugging purposes, check the console logs.");
         }
       } else {
         setDialpadTokenValid(null);
@@ -115,6 +112,7 @@ const SettingsPage = () => {
       
       localStorage.setItem("dialpadApiToken", dialpadApiToken);
       
+      console.log("Testing connection with token:", dialpadApiToken ? "Token provided (length: " + dialpadApiToken.length + ")" : "No token");
       const isValid = await testDialpadConnection(dialpadApiToken);
       
       clearInterval(progressInterval);
@@ -130,9 +128,9 @@ const SettingsPage = () => {
         });
       } else {
         if (dialpadApiToken) {
-          setErrorMessage("The token couldn't be verified. This could be due to network issues or API unavailability. Your token has been saved, but validation failed.");
+          setErrorMessage("The token couldn't be verified. Please ensure it's in the correct format and has appropriate permissions. Your token has been saved, but validation failed.");
           toast.error("Dialpad API token saved but couldn't be verified", {
-            description: "The token has been saved, but we couldn't verify it with Dialpad. You can try again later."
+            description: "The token has been saved, but we couldn't verify it with Dialpad. Please check the console logs for more details."
           });
         } else {
           localStorage.removeItem("dialpadApiToken");
@@ -145,7 +143,7 @@ const SettingsPage = () => {
       console.error("Error saving or validating Dialpad token:", error);
       setDialpadValidationStatus("error");
       setVerificationProgress(100);
-      setErrorMessage(error.message || "Unknown error validating token");
+      setErrorMessage(error.message || "Unknown error validating token. Check the console for details.");
       toast.error(`Error: ${error.message || "Unknown error validating token"}`);
       setShowCallCenters(false);
       
@@ -238,8 +236,8 @@ const SettingsPage = () => {
             ? "Your Dialpad API token is valid and the connection is working properly." 
             : errorMessage || "The token couldn't be verified. Please check your token and try again."}
         </p>
-        {dialpadValidationStatus === "error" && (
-          <div className="mt-3 ml-7">
+        <div className="mt-3 ml-7">
+          {dialpadValidationStatus === "error" && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -255,8 +253,30 @@ const SettingsPage = () => {
             >
               Use Token Anyway
             </Button>
-          </div>
-        )}
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              const token = localStorage.getItem("dialpadApiToken") || "";
+              console.log("Debug token info:", {
+                length: token.length,
+                firstFiveChars: token.substring(0, 5),
+                lastFiveChars: token.substring(token.length - 5),
+                isEmpty: !token,
+                hasSpaces: token.includes(" "),
+                hasTabs: token.includes("\t"),
+                hasNewlines: token.includes("\n")
+              });
+              toast.info("Token information printed to console", {
+                description: "Check the browser console for token details"
+              });
+            }}
+            className="ml-2"
+          >
+            Debug Token
+          </Button>
+        </div>
       </div>
     );
   };

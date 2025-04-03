@@ -69,6 +69,7 @@ const dialpadRequest = async <T>(
   
   try {
     console.log(`Making ${method} request to Dialpad API: ${endpoint} through proxy: ${PROXY_URL}`);
+    console.log(`Using token (first 5 chars): ${apiToken.substring(0, 5)}...`);
     
     const requestOptions = {
       method: "POST",
@@ -89,7 +90,7 @@ const dialpadRequest = async <T>(
       body: JSON.parse(requestOptions.body),
       bodyWithRedactedToken: {
         ...JSON.parse(requestOptions.body),
-        token: apiToken ? "[REDACTED]" : undefined
+        token: "[REDACTED]"
       }
     });
     

@@ -7,6 +7,7 @@ const DIALPAD_API_BASE_URL = "https://api.dialpad.com/v2";
 serve(async (req) => {
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request for CORS preflight");
     return new Response(null, {
       status: 204,
       headers: corsHeaders,
@@ -40,13 +41,24 @@ serve(async (req) => {
       );
     }
     
+    // Properly extract the token from the request body
     const { endpoint, method, token, body: requestBody } = body;
     
-    if (!endpoint || !token) {
-      if (debug) console.log("Missing required parameters:", { endpoint, token: token ? "[REDACTED]" : undefined });
-      
+    if (!endpoint) {
+      if (debug) console.log("Missing endpoint parameter");
       return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
+        JSON.stringify({ error: "Missing endpoint parameter" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!token) {
+      if (debug) console.log("Missing token parameter");
+      return new Response(
+        JSON.stringify({ error: "Missing token parameter" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -55,14 +67,16 @@ serve(async (req) => {
     }
 
     const targetUrl = `${DIALPAD_API_BASE_URL}${endpoint}`;
-    if (debug) console.log(`Making ${method || "GET"} request to Dialpad API: ${targetUrl}`);
+    if (debug) {
+      console.log(`Making ${method || "GET"} request to Dialpad API: ${targetUrl}`);
+      console.log(`Using token (first 5 chars): ${token.substring(0, 5)}...`);
+    }
 
-    // Create headers with Authorization
-    const headers = new Headers({
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    });
+    // Create headers with Authorization using the token from the request body
+    const headers = new Headers();
+    headers.append("Authorization", `Bearer ${token}`);
+    headers.append("Content-Type", "application/json");
+    headers.append("Accept", "application/json");
 
     const options = {
       method: method || "GET",
@@ -73,6 +87,15 @@ serve(async (req) => {
       options.body = JSON.stringify(requestBody);
     }
 
+    if (debug) {
+      console.log("Request options for Dialpad API:", {
+        method: options.method,
+        url: targetUrl,
+        headers: Object.fromEntries([...headers.entries()].filter(key => key[0].toLowerCase() !== "authorization")),
+        body: options.body ? JSON.parse(options.body) : undefined
+      });
+    }
+
     // Add additional timeout and retry logic
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // Extend timeout to 30 seconds
@@ -80,15 +103,7 @@ serve(async (req) => {
     try {
       options.signal = controller.signal;
       
-      if (debug) {
-        console.log("Sending request to Dialpad with options:", {
-          method: options.method,
-          url: targetUrl,
-          headers: Object.fromEntries([...headers.entries()].filter(key => key[0].toLowerCase() !== "authorization")),
-          body: options.body ? JSON.parse(options.body) : undefined
-        });
-      }
-      
+      // Make the actual request to Dialpad API
       const response = await fetch(targetUrl, options);
       clearTimeout(timeoutId); // Clear the timeout now that we have a response
       
