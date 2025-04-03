@@ -1,4 +1,3 @@
-
 /**
  * Service for interacting with the Dialpad API
  * This is a real implementation that makes API calls to Dialpad
@@ -61,7 +60,7 @@ const getDialpadApiToken = (): string => {
 const dialpadRequest = async <T>(
   method: string,
   endpoint: string,
-  body?: any,
+  body?: Record<string, unknown>,
   retries = 3
 ): Promise<T> => {
   const apiToken = getDialpadApiToken();
@@ -76,12 +75,16 @@ const dialpadRequest = async <T>(
     // Get the Supabase session for authorization
     const { data: { session } } = await supabase.auth.getSession();
 
+    if (!session) {
+      throw new Error("No active Supabase session found. Please log in again.");
+    }
+
     const requestOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Authorization": session ? `Bearer ${session.access_token}` : ""
+        "Authorization": `Bearer ${session.access_token}`
       },
       body: JSON.stringify({
         method,
@@ -90,15 +93,6 @@ const dialpadRequest = async <T>(
         body,
       }),
     };
-
-    console.log("Request options:", {
-      ...requestOptions,
-      body: JSON.parse(requestOptions.body),
-      bodyWithRedactedToken: {
-        ...JSON.parse(requestOptions.body),
-        token: "[REDACTED]"
-      }
-    });
 
     // Use an AbortController to handle timeouts
     const controller = new AbortController();
@@ -112,12 +106,6 @@ const dialpadRequest = async <T>(
     const response = await fetch(`${PROXY_URL}?debug=true`, fetchOptions);
     clearTimeout(timeoutId);
 
-    console.log("Response from proxy:", {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries([...response.headers.entries()])
-    });
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: response.statusText }));
       const errorMessage = errorData.error || response.statusText;
@@ -126,7 +114,6 @@ const dialpadRequest = async <T>(
     }
 
     const result = await response.json();
-    console.log("Response parsed:", result);
 
     // If the proxied request had an error status, throw it
     if (result.status >= 400) {
@@ -139,11 +126,11 @@ const dialpadRequest = async <T>(
     console.error("Dialpad API request error:", error);
 
     // Handle AbortController timeouts
-    if (error.name === "AbortError") {
+    if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Request to Dialpad API timed out after 20 seconds. Please try again later.");
     }
 
-    if (retries > 0 && (error instanceof TypeError || (error.message && (error.message.includes("network") || error.message.includes("fetch"))))) {
+    if (retries > 0 && (error instanceof TypeError || (error instanceof Error && (error.message.includes("network") || error.message.includes("fetch"))))) {
       // Network errors retry with exponential backoff
       const delay = 2000 * Math.pow(2, 3 - retries);
       console.log(`Network error. Retrying in ${delay}ms...`, error);
