@@ -73,11 +73,15 @@ const dialpadRequest = async <T>(
     console.log(`Making ${method} request to Dialpad API: ${endpoint} through proxy: ${PROXY_URL}`);
     console.log(`Using token (first 5 chars): ${apiToken.substring(0, 5)}...`);
 
+    // Get the Supabase session for authorization
+    const { data: { session } } = await supabase.auth.getSession();
+
     const requestOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "Authorization": session ? `Bearer ${session.access_token}` : ""
       },
       body: JSON.stringify({
         method,
@@ -330,15 +334,22 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
       console.log(`Connection test attempt ${attemptCount}/${maxAttempts}`);
 
       try {
-        // Use our proxy endpoint to test the connection with a simple endpoint
+        // Get the Supabase session for authorization
         const { data: { session } } = await supabase.auth.getSession();
 
+        if (!session) {
+          console.warn("No active Supabase session found for authorization");
+        } else {
+          console.log("Got Supabase session, access token available:", !!session.access_token);
+        }
+
+        // Use our proxy endpoint to test the connection with a simple endpoint
         const requestOptions = {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "Authorization": `Bearer ${session?.access_token}`
+            "Authorization": session ? `Bearer ${session.access_token}` : ""
           },
           body: JSON.stringify({
             method: "GET",
@@ -358,7 +369,6 @@ export const testDialpadConnection = async (token: string): Promise<boolean> => 
         // Add timeout handling
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
 
         const response = await fetch(`${PROXY_URL}?debug=true`, {
           ...requestOptions,

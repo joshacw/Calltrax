@@ -200,6 +200,37 @@ const SettingsPage = () => {
     toast.success("New webhook URL generated and copied to clipboard");
   };
 
+  const debugTokenFormat = () => {
+    const token = localStorage.getItem("dialpadApiToken") || "";
+    console.log("Debug token info:", {
+      length: token.length,
+      firstFiveChars: token.substring(0, 5),
+      lastFiveChars: token.substring(token.length - 5),
+      isEmpty: !token,
+      hasSpaces: token.includes(" "),
+      hasTabs: token.includes("\t"),
+      hasNewlines: token.includes("\n"),
+      base64Encoded: /^[A-Za-z0-9+/=]+$/.test(token),
+      containsInvalidChars: /[^A-Za-z0-9+/=._-]/.test(token)
+    });
+    
+    console.log("Token debug (full):", token);
+    
+    toast.info("Token information printed to console", {
+      description: "Check the browser console for token details."
+    });
+    
+    testDialpadConnection(token)
+      .then(isValid => {
+        console.log("Token validation result:", isValid);
+        toast.info(`Direct token validation: ${isValid ? "Valid" : "Invalid"}`);
+      })
+      .catch(error => {
+        console.error("Direct token validation error:", error);
+        toast.error(`Token validation error: ${error.message}`);
+      });
+  };
+
   const renderDialpadConnectionStatus = () => {
     if (dialpadValidationStatus === "idle") {
       return null;
@@ -213,6 +244,45 @@ const SettingsPage = () => {
             <span>Verifying Dialpad connection...</span>
           </div>
           <Progress value={verificationProgress} className="h-2" />
+        </div>
+      );
+    }
+    
+    if (dialpadValidationStatus === "error") {
+      return (
+        <div className={`mt-4 p-4 rounded-md border bg-red-50 border-red-200 text-red-800`}>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <h3 className="text-sm font-medium">Connection Failed</h3>
+          </div>
+          <p className="text-sm mt-1 ml-7">
+            {errorMessage || "The token couldn't be verified. Please check your token and try again."}
+          </p>
+          <div className="mt-3 ml-7 flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (dialpadApiToken) {
+                  setShowCallCenters(true);
+                  toast.info("Proceeding with saved token", {
+                    description: "Using the saved token despite validation issues."
+                  });
+                }
+              }}
+              className="text-red-800 border-red-300 hover:bg-red-100"
+            >
+              Use Token Anyway
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={debugTokenFormat}
+              className="text-blue-800 border-blue-300 hover:bg-blue-100"
+            >
+              Debug Token Format
+            </Button>
+          </div>
         </div>
       );
     }
