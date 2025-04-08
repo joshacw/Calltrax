@@ -30,6 +30,7 @@ serve(async (req) => {
     let body;
     try {
       body = await req.json();
+      console.log('PL-index', body);
     } catch (e) {
       console.error("Failed to parse request body:", e);
       return new Response(

@@ -93,6 +93,7 @@ const dialpadRequest = async <T>(
         body,
       }),
     };
+    console.log('PL-service', requestOptions);
 
     // Use an AbortController to handle timeouts
     const controller = new AbortController();
