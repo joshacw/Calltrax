@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -13,13 +14,15 @@ import { validateDialpadApiToken, testDialpadConnection } from "@/services/dialp
 import { DialpadCallCenters } from "@/components/DialpadCallCenters";
 import { Progress } from "@/components/ui/progress";
 
+type ValidationStatus = "idle" | "validating" | "success" | "error";
+
 const SettingsPage = () => {
   const [dialpadApiToken, setDialpadApiToken] = useState(() => {
     return localStorage.getItem("dialpadApiToken") || "";
   });
   
   const [dialpadTokenValid, setDialpadTokenValid] = useState<boolean | null>(null);
-  const [dialpadValidationStatus, setDialpadValidationStatus: React.Dispatch<React.SetStateAction<"idle" | "validating" | "success" | "error">> = useState("idle");
+  const [dialpadValidationStatus, setDialpadValidationStatus] = useState<ValidationStatus>("idle");
   const [showCallCenters, setShowCallCenters] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [verificationProgress, setVerificationProgress] = useState(0);
@@ -287,10 +290,13 @@ const SettingsPage = () => {
       );
     }
     
+    // This case handles success state
+    const bgClassName = dialpadValidationStatus === "success" 
+      ? "bg-green-50 border-green-200 text-green-800" 
+      : "bg-red-50 border-red-200 text-red-800";
+      
     return (
-      <div className={`mt-4 p-4 rounded-md border ${
-        dialpadValidationStatus === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"
-      }`}>
+      <div className={`mt-4 p-4 rounded-md border ${bgClassName}`}>
         <div className="flex items-center gap-2">
           {dialpadValidationStatus === "success" ? (
             <CheckCircle className="h-5 w-5 text-green-500" />
