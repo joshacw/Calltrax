@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -290,46 +289,17 @@ const SettingsPage = () => {
       );
     }
     
-    // This case handles success state
-    const bgClassName = dialpadValidationStatus === "success" 
-      ? "bg-green-50 border-green-200 text-green-800" 
-      : "bg-red-50 border-red-200 text-red-800";
-      
+    // This case handles success state (when dialpadValidationStatus === "success")
     return (
-      <div className={`mt-4 p-4 rounded-md border ${bgClassName}`}>
+      <div className="mt-4 p-4 rounded-md border bg-green-50 border-green-200 text-green-800">
         <div className="flex items-center gap-2">
-          {dialpadValidationStatus === "success" ? (
-            <CheckCircle className="h-5 w-5 text-green-500" />
-          ) : (
-            <AlertCircle className="h-5 w-5 text-red-500" />
-          )}
-          <h3 className="text-sm font-medium">
-            {dialpadValidationStatus === "success" ? "Dialpad Connected" : "Connection Failed"}
-          </h3>
+          <CheckCircle className="h-5 w-5 text-green-500" />
+          <h3 className="text-sm font-medium">Dialpad Connected</h3>
         </div>
         <p className="text-sm mt-1 ml-7">
-          {dialpadValidationStatus === "success" 
-            ? "Your Dialpad API token is valid and the connection is working properly." 
-            : errorMessage || "The token couldn't be verified. Please check your token and try again."}
+          Your Dialpad API token is valid and the connection is working properly.
         </p>
         <div className="mt-3 ml-7">
-          {dialpadValidationStatus === "error" && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                if (dialpadApiToken) {
-                  setShowCallCenters(true);
-                  toast.info("Proceeding with saved token", {
-                    description: "Using the saved token despite validation issues."
-                  });
-                }
-              }}
-              className="text-red-800 border-red-300 hover:bg-red-100"
-            >
-              Use Token Anyway
-            </Button>
-          )}
           <Button 
             variant="outline" 
             size="sm" 
