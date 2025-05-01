@@ -19,7 +19,7 @@ const SettingsPage = () => {
   });
   
   const [dialpadTokenValid, setDialpadTokenValid] = useState<boolean | null>(null);
-  const [dialpadValidationStatus, setDialpadValidationStatus] = useState<"idle" | "validating" | "success" | "error">("idle");
+  const [dialpadValidationStatus, setDialpadValidationStatus: React.Dispatch<React.SetStateAction<"idle" | "validating" | "success" | "error">> = useState("idle");
   const [showCallCenters, setShowCallCenters] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [verificationProgress, setVerificationProgress] = useState(0);
