@@ -4,7 +4,6 @@ import { getFilteredLeads } from "@/services/mockData";
 import { FilterOptions, Lead } from "@/types";
 import { useEffect, useState } from "react";
 import { DashboardFilter } from "@/components/DashboardFilter";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PipelineCard } from "@/components/PipelineCard";
 
 // Define the pipeline stages
@@ -15,7 +14,7 @@ enum PipelineStage {
   FU4 = "FU4",
 }
 
-const LeadsPage = () => {
+const Leads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filters, setFilters] = useState<FilterOptions>({
     agencies: [],
@@ -152,10 +151,4 @@ const LeadsPage = () => {
   );
 };
 
-const ProtectedLeadsPage = () => (
-  <ProtectedRoute allowedRoles={["admin"]}>
-    <LeadsPage />
-  </ProtectedRoute>
-);
-
-export default ProtectedLeadsPage;
+export default Leads;

@@ -2,9 +2,15 @@
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { BarChart3, Phone, Home, LogOut, Settings, Users, UserPlus, Mail, User } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    logout();
+  };
 
   return (
     <SidebarProvider>
@@ -23,7 +29,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     {user.name} ({user.role})
                   </span>
                   <button 
-                    onClick={logout}
+                    onClick={handleLogout}
                     className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
                   >
                     <LogOut size={16} />
@@ -64,10 +70,10 @@ const AppSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/dashboard">
+                  <Link to="/dashboard">
                     <Home size={18} />
                     <span>Dashboard</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
@@ -75,42 +81,42 @@ const AppSidebar = () => {
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/leads">
+                      <Link to="/leads">
                         <Users size={18} />
                         <span>Leads</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/calls">
+                      <Link to="/calls">
                         <Phone size={18} />
                         <span>Calls</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/add-client">
+                      <Link to="/add-client">
                         <UserPlus size={18} />
                         <span>Add Client</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/insights">
+                      <Link to="/insights">
                         <BarChart3 size={18} />
                         <span>Insights</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/settings">
+                      <Link to="/settings">
                         <Settings size={18} />
                         <span>Settings</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
@@ -120,34 +126,34 @@ const AppSidebar = () => {
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/team-members">
+                      <Link to="/team-members">
                         <Users size={18} />
                         <span>Team Members</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/email-reports">
+                      <Link to="/email-reports">
                         <Mail size={18} />
                         <span>Email Reports</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/insights">
+                      <Link to="/insights">
                         <BarChart3 size={18} />
                         <span>Insights</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/account">
+                      <Link to="/account">
                         <User size={18} />
                         <span>Account</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
