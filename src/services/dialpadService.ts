@@ -22,6 +22,77 @@ export const validateDialpadApiToken = async (): Promise<boolean> => {
   }
 };
 
+// Test Dialpad connection with a provided token
+export const testDialpadConnection = async (token: string): Promise<boolean> => {
+  if (!token) {
+    console.log("No Dialpad API token provided for testing");
+    return false;
+  }
+  
+  try {
+    // In a real implementation, this would make an API call to test the token
+    // For demo purposes, we simulate a successful connection if token is not empty
+    console.log("Testing Dialpad connection with token length:", token.length);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock validation - in a real app this would call the Dialpad API
+    return token.length > 10; // Basic validation - token should be longer than 10 chars
+  } catch (error) {
+    console.error("Error testing Dialpad connection:", error);
+    return false;
+  }
+};
+
+// Get Dialpad call centers from the API
+export const getDialpadCallCenters = async () => {
+  const apiToken = localStorage.getItem("dialpadApiToken");
+  
+  if (!apiToken) {
+    throw new Error("No Dialpad API token found");
+  }
+  
+  try {
+    // In a real implementation, this would fetch from the Dialpad API
+    // For demo purposes, we return mock data
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Mock call centers
+    return [
+      {
+        id: "cc_1",
+        name: "Sales Team Call Center",
+        channel_id: "ch_sales",
+        created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "cc_2",
+        name: "Support Team Call Center",
+        channel_id: "ch_support",
+        created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "cc_3",
+        name: "Marketing Team Call Center",
+        channel_id: "ch_marketing",
+        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "cc_4",
+        name: "Enterprise Solutions Call Center",
+        channel_id: "ch_enterprise",
+        created_at: new Date().toISOString(),
+      }
+    ];
+  } catch (error) {
+    console.error("Error fetching Dialpad call centers:", error);
+    throw new Error(`Failed to fetch Dialpad call centers: ${error.message}`);
+  }
+};
+
 // Create a new Dialpad integration for a client
 export const createDialpadClient = async (clientName: string) => {
   try {
