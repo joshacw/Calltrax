@@ -1,10 +1,10 @@
-
 import { User } from "@/types";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { authenticateUser } from "@/services/mockData";
 
 interface AuthContextType {
   user: User | null;
@@ -82,6 +82,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      // First check if using demo credentials
+      if ((email === "admin@calltrax.com" || email === "client1@example.com") && password === "password") {
+        // Use mock authentication for demo accounts
+        const mockUser = authenticateUser(email, password);
+        
+        if (mockUser) {
+          setUser(mockUser);
+          setLoading(false);
+          navigate("/dashboard");
+          toast.success("Successfully logged in with demo account!");
+          return;
+        }
+      }
+
+      // Otherwise, use Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -105,6 +120,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     try {
+      // Check if using a mock user
+      if (user && !session) {
+        setUser(null);
+        navigate("/login");
+        toast.success("Successfully logged out");
+        return;
+      }
+
+      // Otherwise, use Supabase logout
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
