@@ -71,6 +71,7 @@ const LeadsPage = () => {
                 getPipelineLeads(leads, PipelineStage.FU1).map((lead) => (
                   <PipelineCard
                     key={lead.id}
+                    leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
@@ -91,6 +92,7 @@ const LeadsPage = () => {
                 getPipelineLeads(leads, PipelineStage.FU2).map((lead) => (
                   <PipelineCard
                     key={lead.id}
+                    leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
@@ -111,6 +113,7 @@ const LeadsPage = () => {
                 getPipelineLeads(leads, PipelineStage.FU3).map((lead) => (
                   <PipelineCard
                     key={lead.id}
+                    leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
@@ -131,6 +134,7 @@ const LeadsPage = () => {
                 getPipelineLeads(leads, PipelineStage.FU4).map((lead) => (
                   <PipelineCard
                     key={lead.id}
+                    leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}

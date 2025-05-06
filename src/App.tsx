@@ -23,6 +23,7 @@ import GohighlevelIntegration from "./pages/GohighlevelIntegration";
 import SubAccounts from "./pages/SubAccounts";
 import PublicDashboard from "./pages/PublicDashboard";
 import Insights from "./pages/Insights";
+import LeadDetails from "./pages/LeadDetails";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,12 @@ const App = () => (
             <Route path="/leads" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <Leads />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/lead/:leadId" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <LeadDetails />
               </ProtectedRoute>
             } />
             

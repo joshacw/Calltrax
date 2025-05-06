@@ -499,3 +499,14 @@ export const authenticateUser = (email: string, password: string) => {
   }
   return null;
 };
+
+// Get lead by ID
+export const getLeadById = async (leadId: string): Promise<Lead | null> => {
+  // In a real app, this would make an API call to get lead details
+  const allLeads = getFilteredLeads([], [], {
+    start: new Date(0).toISOString(),
+    end: new Date().toISOString(),
+  });
+  
+  return allLeads.find(lead => lead.id === leadId) || null;
+};

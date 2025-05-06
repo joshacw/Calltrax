@@ -1,12 +1,14 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "./ui/card";
+import { useNavigate } from "react-router-dom";
 
 interface PipelineCardProps {
   contactId: string;
   contactNumber: string;
   lastContactDate: string | null;
   notes?: string;
+  leadId: string;
   onClick?: () => void;
 }
 
@@ -15,12 +17,23 @@ export const PipelineCard = ({
   contactNumber,
   lastContactDate,
   notes,
+  leadId,
   onClick,
 }: PipelineCardProps) => {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/lead/${leadId}`);
+    }
+  };
+  
   return (
     <Card 
       className="w-full mb-3 cursor-pointer hover:border-primary transition-colors" 
-      onClick={onClick}
+      onClick={handleClick}
     >
       <CardContent className="p-4">
         <h3 className="font-medium text-md">{contactId}</h3>
