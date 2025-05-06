@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -76,7 +76,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
   });
 
   // Check if Dialpad API token exists on component mount
-  useState(() => {
+  useEffect(() => {
     const checkApiToken = async () => {
       const apiToken = localStorage.getItem("dialpadApiToken");
       if (!apiToken) {
@@ -96,7 +96,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
     };
     
     checkApiToken();
-  });
+  }, []);
 
   const saveClientToDatabase = async (name: string, dialpadData: any): Promise<{clientId: string, webhookUrl: string}> => {
     try {
