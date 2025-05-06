@@ -10,6 +10,8 @@ interface PipelineCardProps {
   notes?: string;
   leadId: string;
   onClick?: () => void;
+  firstName?: string;
+  lastName?: string;
 }
 
 export const PipelineCard = ({
@@ -19,6 +21,8 @@ export const PipelineCard = ({
   notes,
   leadId,
   onClick,
+  firstName,
+  lastName,
 }: PipelineCardProps) => {
   const navigate = useNavigate();
   
@@ -29,6 +33,11 @@ export const PipelineCard = ({
       navigate(`/lead/${leadId}`);
     }
   };
+
+  // Display first and last name if available, otherwise use contact ID
+  const displayName = firstName && lastName 
+    ? `${firstName} ${lastName}` 
+    : contactId;
   
   return (
     <Card 
@@ -36,7 +45,7 @@ export const PipelineCard = ({
       onClick={handleClick}
     >
       <CardContent className="p-4">
-        <h3 className="font-medium text-md">{contactId}</h3>
+        <h3 className="font-medium text-md">{displayName}</h3>
         <p className="text-sm text-muted-foreground">{contactNumber}</p>
         {lastContactDate && (
           <p className="text-xs mt-1 text-muted-foreground">

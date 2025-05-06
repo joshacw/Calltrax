@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -50,6 +49,8 @@ export interface Lead {
   connected: boolean;
   appointmentBooked: boolean;
   timeOfLastCall: string | null;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Call {

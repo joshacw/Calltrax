@@ -19,6 +19,13 @@ export const LeadInfoPanel = ({ lead }: LeadInfoPanelProps) => {
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y">
+          {(lead.firstName || lead.lastName) && (
+            <div className="px-4 py-3">
+              <h3 className="text-sm font-medium text-muted-foreground">Name</h3>
+              <p className="text-sm mt-1">{`${lead.firstName || ''} ${lead.lastName || ''}`}</p>
+            </div>
+          )}
+          
           <div className="px-4 py-3">
             <h3 className="text-sm font-medium text-muted-foreground">Contact ID</h3>
             <p className="text-sm mt-1">{lead.contactId || `Lead-${lead.id.substring(0, 8)}`}</p>

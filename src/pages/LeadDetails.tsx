@@ -96,10 +96,15 @@ const LeadDetailsPage = () => {
     );
   }
 
+  // Create display name using first and last name if available
+  const displayName = lead.firstName && lead.lastName 
+    ? `${lead.firstName} ${lead.lastName}` 
+    : lead.contactId || `Lead-${lead.id.substring(0, 8)}`;
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">{lead.contactId || `Lead-${lead.id.substring(0, 8)}`}</h1>
+        <h1 className="text-3xl font-bold mb-6">{displayName}</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Lead Info Panel */}

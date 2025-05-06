@@ -72,6 +72,8 @@ const Leads = () => {
                     key={lead.id}
                     leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
+                    firstName={lead.firstName}
+                    lastName={lead.lastName}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
                     notes="Needs first follow-up call"
@@ -93,6 +95,8 @@ const Leads = () => {
                     key={lead.id}
                     leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
+                    firstName={lead.firstName}
+                    lastName={lead.lastName}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
                     notes="Second follow-up required"
@@ -114,6 +118,8 @@ const Leads = () => {
                     key={lead.id}
                     leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
+                    firstName={lead.firstName}
+                    lastName={lead.lastName}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
                     notes="Third follow-up pending"
@@ -135,6 +141,8 @@ const Leads = () => {
                     key={lead.id}
                     leadId={lead.id}
                     contactId={lead.contactId || `Lead-${lead.id.substring(0,8)}`}
+                    firstName={lead.firstName}
+                    lastName={lead.lastName}
                     contactNumber={lead.contactNumber}
                     lastContactDate={lead.timeOfLastCall || lead.timeOfFirstCall}
                     notes="Final follow-up stage"
