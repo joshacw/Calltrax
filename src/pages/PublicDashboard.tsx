@@ -2,13 +2,15 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { DashboardMetrics } from "@/types";
-import { getDashboardMetrics } from "@/services/mockData";
+import { getDashboardMetrics, getMonthToDateData, getWeekToDateData } from "@/services/mockData";
 import { MetricCard, StatCard } from "@/components/MetricCard";
 import { PerformanceChart } from "@/components/PerformanceChart";
 
 const PublicDashboard = () => {
   const { dashboardId } = useParams();
   const [metrics] = useState<DashboardMetrics>(getDashboardMetrics());
+  const [weekData] = useState(getWeekToDateData());
+  const [monthData] = useState(getMonthToDateData());
   
   // In a real app, we would use the dashboardId to fetch the saved dashboard config
   
@@ -19,9 +21,16 @@ const PublicDashboard = () => {
         <p className="text-muted-foreground">Public view - Read only</p>
       </div>
       
-      {/* Performance Chart - with improved visualization */}
-      <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-        <PerformanceChart data={metrics.graphData || []} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Week to date chart */}
+        <div className="bg-white p-4 rounded-md border border-gray-100">
+          <PerformanceChart data={weekData} title="Week to Date Performance" />
+        </div>
+        
+        {/* Month to date chart */}
+        <div className="bg-white p-4 rounded-md border border-gray-100">
+          <PerformanceChart data={monthData} title="Month to Date Performance" />
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

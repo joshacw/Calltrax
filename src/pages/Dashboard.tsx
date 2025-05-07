@@ -1,8 +1,9 @@
+
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { Layout } from "@/components/Layout";
 import { MetricCard, StatCard } from "@/components/MetricCard";
 import { InsightsPanel } from "@/components/InsightsPanel";
-import { getDashboardMetrics } from "@/services/mockData";
+import { getDashboardMetrics, getMonthToDateData, getWeekToDateData } from "@/services/mockData";
 import { FilterOptions } from "@/types";
 import { useState } from "react";
 import { PerformanceChart } from "@/components/PerformanceChart";
@@ -14,6 +15,8 @@ import { toast } from "sonner";
 const Dashboard = () => {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState(getDashboardMetrics());
+  const [weekData] = useState(getWeekToDateData());
+  const [monthData] = useState(getMonthToDateData());
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
     agencies: [],
     locations: [],
@@ -73,9 +76,16 @@ const Dashboard = () => {
         
         {user?.role === "admin" && <InsightsPanel />}
         
-        {/* Performance Chart - with improved visualization */}
-        <div className="bg-white p-4 rounded-md border border-gray-100 mb-8">
-          <PerformanceChart data={metrics.graphData || []} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Week to date chart */}
+          <div className="bg-white p-4 rounded-md border border-gray-100">
+            <PerformanceChart data={weekData} title="Week to Date Performance" />
+          </div>
+          
+          {/* Month to date chart */}
+          <div className="bg-white p-4 rounded-md border border-gray-100">
+            <PerformanceChart data={monthData} title="Month to Date Performance" />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

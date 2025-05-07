@@ -1,4 +1,5 @@
 import { Agency, Call, Client, DashboardMetrics, GraphDataPoint, Lead, SubAccount, User } from "@/types";
+import { format, addDays, startOfMonth, subDays } from "date-fns";
 
 // Mock Users
 export const users: User[] = [
@@ -236,8 +237,6 @@ export const getDashboardMetrics = (
   teamMemberFilter?: string[]
 ): DashboardMetrics => {
   // In a real app, you would filter the data based on the provided filters
-  // For now, we'll return updated metrics that align with our chart data
-  
   return {
     averageSpeedToLead: 4.8,
     connectionRate: 55, // 22/40 * 100 = ~55%
@@ -252,7 +251,7 @@ export const getDashboardMetrics = (
 };
 
 // Helper function to get week-to-date data for the dashboard
-const getWeekToDateData = (): GraphDataPoint[] => {
+export const getWeekToDateData = (): GraphDataPoint[] => {
   const data: GraphDataPoint[] = [];
   const today = new Date();
   
@@ -294,9 +293,8 @@ const getWeekToDateData = (): GraphDataPoint[] => {
     const currentDate = new Date(startOfCurrentWeek);
     currentDate.setDate(startOfCurrentWeek.getDate() + i);
     const variation = dailyVariations[i];
-    const isPastToday = currentDate > today;
     
-    // Calculate actual/projected values
+    // Calculate actual values
     const leads = Math.round(dailyBenchmarks.leads * variation.leads);
     const calls = Math.round(dailyBenchmarks.calls * variation.calls);
     const connections = Math.round(dailyBenchmarks.connections * variation.connections);
@@ -310,49 +308,84 @@ const getWeekToDateData = (): GraphDataPoint[] => {
     
     const dateStr = currentDate.toISOString().split('T')[0];
     
-    if (isPastToday) {
-      // For projected dates (after today)
-      data.push({
-        date: dateStr,
-        leads: null,
-        calls: null,
-        connections: null,
-        appointments: null,
-        leadsProjected: leads,
-        callsProjected: calls,
-        connectionsProjected: connections,
-        appointmentsProjected: appointments,
-        leadsCumulative: null,
-        callsCumulative: null,
-        connectionsCumulative: null,
-        appointmentsCumulative: null,
-        leadsProjectedCumulative: cumulativeLeads,
-        callsProjectedCumulative: cumulativeCalls,
-        connectionsProjectedCumulative: cumulativeConnections,
-        appointmentsProjectedCumulative: cumulativeAppointments
-      });
-    } else {
-      // For past dates (up to today)
-      data.push({
-        date: dateStr,
-        leads: leads,
-        calls: calls,
-        connections: connections,
-        appointments: appointments,
-        leadsProjected: null,
-        callsProjected: null,
-        connectionsProjected: null,
-        appointmentsProjected: null,
-        leadsCumulative: cumulativeLeads,
-        callsCumulative: cumulativeCalls,
-        connectionsCumulative: cumulativeConnections,
-        appointmentsCumulative: cumulativeAppointments,
-        leadsProjectedCumulative: null,
-        callsProjectedCumulative: null,
-        connectionsProjectedCumulative: null,
-        appointmentsProjectedCumulative: null
-      });
-    }
+    // For past dates (up to today)
+    data.push({
+      date: dateStr,
+      leads: leads,
+      calls: calls,
+      connections: connections,
+      appointments: appointments,
+      leadsCumulative: cumulativeLeads,
+      callsCumulative: cumulativeCalls,
+      connectionsCumulative: cumulativeConnections,
+      appointmentsCumulative: cumulativeAppointments
+    });
+  }
+  
+  return data;
+};
+
+// Helper function to get month-to-date data for the dashboard
+export const getMonthToDateData = (): GraphDataPoint[] => {
+  const data: GraphDataPoint[] = [];
+  const today = new Date();
+  
+  // Get the start of the current month
+  const startOfCurrentMonth = startOfMonth(today);
+  
+  // Daily benchmarks - slightly different for month view
+  const dailyBenchmarks = {
+    leads: 20,
+    calls: 35,
+    connections: 18,
+    appointments: 7
+  };
+
+  // For cumulative calculations
+  let cumulativeLeads = 0;
+  let cumulativeCalls = 0;
+  let cumulativeConnections = 0;
+  let cumulativeAppointments = 0;
+  
+  // Generate data for each day of the month up to today
+  const daysInMonth = today.getDate();
+  
+  for (let i = 0; i < daysInMonth; i++) {
+    const currentDate = addDays(startOfCurrentMonth, i);
+    
+    // Add some randomness to make the data look more realistic
+    const randomFactor = 0.7 + Math.random() * 0.6; // Random between 0.7 and 1.3
+    
+    // Weekend adjustment - less activity on weekends
+    const dayOfWeek = currentDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const weekendFactor = isWeekend ? 0.4 : 1;
+    
+    // Calculate actual values with randomness and weekend adjustment
+    const leads = Math.round(dailyBenchmarks.leads * randomFactor * weekendFactor);
+    const calls = Math.round(dailyBenchmarks.calls * randomFactor * weekendFactor);
+    const connections = Math.round(dailyBenchmarks.connections * randomFactor * weekendFactor);
+    const appointments = Math.round(dailyBenchmarks.appointments * randomFactor * weekendFactor);
+    
+    // Update cumulative values
+    cumulativeLeads += leads;
+    cumulativeCalls += calls;
+    cumulativeConnections += connections;
+    cumulativeAppointments += appointments;
+    
+    const dateStr = format(currentDate, 'yyyy-MM-dd');
+    
+    data.push({
+      date: dateStr,
+      leads: leads,
+      calls: calls,
+      connections: connections,
+      appointments: appointments,
+      leadsCumulative: cumulativeLeads,
+      callsCumulative: cumulativeCalls,
+      connectionsCumulative: cumulativeConnections,
+      appointmentsCumulative: cumulativeAppointments
+    });
   }
   
   return data;

@@ -90,22 +90,14 @@ export interface PerformanceKPIs {
 
 export interface GraphDataPoint {
   date: string;
+  leads: number | null;
   calls: number | null;
   connections: number | null;
   appointments: number | null;
-  leads: number | null;
-  callsProjected?: number | null;
-  connectionsProjected?: number | null;
-  appointmentsProjected?: number | null;
-  leadsProjected?: number | null;
+  leadsCumulative?: number | null;
   callsCumulative?: number | null;
   connectionsCumulative?: number | null;
   appointmentsCumulative?: number | null;
-  leadsCumulative?: number | null;
-  callsProjectedCumulative?: number | null;
-  connectionsProjectedCumulative?: number | null;
-  appointmentsProjectedCumulative?: number | null;
-  leadsProjectedCumulative?: number | null;
 }
 
 export interface FilterOptions {
