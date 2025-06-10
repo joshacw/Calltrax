@@ -1,3 +1,4 @@
+
 import { User } from "@/types";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -53,17 +54,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Using explicit type assertion to fix the TypeScript error
+      // Query the profiles table directly using rpc or a custom query
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+        .rpc('get_user_profile', { user_id: userId });
 
-      if (error) throw error;
+      if (error) {
+        // If RPC fails, try direct query
+        const { data: directData, error: directError } = await supabase
+          .from('profiles' as any)
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      if (data) {
-        // Using explicit typing to handle the profile data
+        if (directError) throw directError;
+        
+        if (directData) {
+          setUser({
+            id: userId,
+            email: session?.user?.email || '',
+            name: directData.name || session?.user?.email?.split('@')[0] || 'User',
+            role: (directData.role as 'admin' | 'client' | 'agency') || 'client',
+            clientId: directData.client_id || undefined,
+            agencyId: directData.agency_id || undefined
+          });
+        }
+      } else if (data) {
         setUser({
           id: userId,
           email: session?.user?.email || '',
