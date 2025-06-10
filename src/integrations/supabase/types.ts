@@ -9,7 +9,256 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      agencies: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agencies_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calls: {
+        Row: {
+          agent_connected: boolean | null
+          contact_number: string
+          created_at: string
+          direction: string
+          disposition: string | null
+          duration: number
+          id: string
+          lead_id: string
+          notes: string | null
+          public_share_link: string | null
+          timestamp: string
+          updated_at: string
+        }
+        Insert: {
+          agent_connected?: boolean | null
+          contact_number: string
+          created_at?: string
+          direction: string
+          disposition?: string | null
+          duration?: number
+          id?: string
+          lead_id: string
+          notes?: string | null
+          public_share_link?: string | null
+          timestamp?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_connected?: boolean | null
+          contact_number?: string
+          created_at?: string
+          direction?: string
+          disposition?: string | null
+          duration?: number
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          public_share_link?: string | null
+          timestamp?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      integration_settings: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          integration_type: string
+          settings: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          integration_type: string
+          settings?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          integration_type?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          agency_id: string
+          appointment_booked: boolean
+          connected: boolean
+          contact_id: string
+          contact_number: string
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          location: string | null
+          number_of_calls: number
+          number_of_conversations: number
+          speed_to_lead: number | null
+          time_of_first_call: string | null
+          time_of_last_call: string | null
+          time_of_notification: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          appointment_booked?: boolean
+          connected?: boolean
+          contact_id: string
+          contact_number: string
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          location?: string | null
+          number_of_calls?: number
+          number_of_conversations?: number
+          speed_to_lead?: number | null
+          time_of_first_call?: string | null
+          time_of_last_call?: string | null
+          time_of_notification?: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          appointment_booked?: boolean
+          connected?: boolean
+          contact_id?: string
+          contact_number?: string
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          location?: string | null
+          number_of_calls?: number
+          number_of_conversations?: number
+          speed_to_lead?: number | null
+          time_of_first_call?: string | null
+          time_of_last_call?: string | null
+          time_of_notification?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          active: boolean
+          client_id: string
+          created_at: string
+          id: string
+          secret: string
+          type: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          client_id: string
+          created_at?: string
+          id?: string
+          secret: string
+          type: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          client_id?: string
+          created_at?: string
+          id?: string
+          secret?: string
+          type?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

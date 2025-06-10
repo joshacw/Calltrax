@@ -58,6 +58,10 @@ export const processLeadWebhook = async (
     if (webhookError) {
       return { success: false, error: "Invalid webhook secret" };
     }
+
+    if (!webhookData) {
+      return { success: false, error: "Webhook not found" };
+    }
     
     // Get agencies for this client
     const { data: agencyData, error: agencyError } = await supabase
@@ -69,6 +73,10 @@ export const processLeadWebhook = async (
     if (agencyError) {
       return { success: false, error: "Client has no agencies" };
     }
+
+    if (!agencyData) {
+      return { success: false, error: "Agency not found" };
+    }
     
     // Create a new lead
     const { data: leadData, error: leadError } = await supabase
@@ -79,8 +87,8 @@ export const processLeadWebhook = async (
         contact_number: payload.contact.phone || 'Unknown',
         location: payload.lead?.location || 'Main Location',
         time_of_notification: payload.lead?.timestamp || new Date().toISOString(),
-        firstName: payload.contact.firstName || '',
-        lastName: payload.contact.lastName || '',
+        first_name: payload.contact.firstName || '',
+        last_name: payload.contact.lastName || '',
       })
       .select('id')
       .single();
@@ -88,9 +96,13 @@ export const processLeadWebhook = async (
     if (leadError) {
       return { success: false, error: leadError.message };
     }
+
+    if (!leadData) {
+      return { success: false, error: "Failed to create lead" };
+    }
     
     return { success: true, leadId: leadData.id };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing lead webhook:", error);
     return { success: false, error: error.message };
   }
@@ -103,7 +115,6 @@ export const getWebhookBySecret = async (secret: string) => {
     .select(`
       id,
       client_id,
-      agency_id,
       type,
       url,
       active,

@@ -45,7 +45,7 @@ export const DialpadCallCenters = ({ onCreateAgencies }: DialpadCallCentersProps
       const existingCallCenterIds = new Set(
         existingSettings?.map(setting => {
           // Handle the type more carefully
-          const settings = setting.settings;
+          const settings = setting.settings as any;
           if (typeof settings === 'object' && settings !== null && 'call_center_id' in settings) {
             return settings.call_center_id;
           }
@@ -66,7 +66,7 @@ export const DialpadCallCenters = ({ onCreateAgencies }: DialpadCallCentersProps
         initialSelected[center.id] = true;
       });
       setSelectedCallCenters(initialSelected);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching call centers:", error);
       toast.error("Failed to fetch Dialpad call centers", {
         description: error.message,
@@ -118,6 +118,11 @@ export const DialpadCallCenters = ({ onCreateAgencies }: DialpadCallCentersProps
           console.error(`Error creating client for ${center.name}:`, clientError);
           continue;
         }
+
+        if (!clientData) {
+          console.error(`No client data returned for ${center.name}`);
+          continue;
+        }
         
         // Create agency for the client
         const { error: agencyError } = await supabase
@@ -159,7 +164,7 @@ export const DialpadCallCenters = ({ onCreateAgencies }: DialpadCallCentersProps
       
       // Notify parent component
       onCreateAgencies();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating agencies:", error);
       toast.error("Failed to create agencies", {
         description: error.message,

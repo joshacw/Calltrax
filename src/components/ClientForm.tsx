@@ -112,6 +112,10 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         .single();
         
       if (clientError) throw clientError;
+
+      if (!clientData) {
+        throw new Error("Failed to create client - no data returned");
+      }
       
       // Insert integration settings for Dialpad
       const { error: settingsError } = await supabase
@@ -156,7 +160,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
           client_id: clientData.id,
           type: 'lead',
           url: webhookUrl,
-          secret: webhookId,
+          secret: webhookId || '',
           active: true,
         });
         
@@ -165,7 +169,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
       updateStep("createWebhook", "completed");
       updateStep("saveClientToDatabase", "completed");
       return { clientId: clientData.id, webhookUrl };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving client to database:", error);
       updateStep("saveClientToDatabase", "error", `Database error: ${error.message}`);
       if (steps.createWebhook.status === "loading") {
@@ -215,7 +219,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         if (onSuccess) {
           onSuccess(data.name, clientId, webhookUrl);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error during Dialpad integration:", error);
         // Mark any pending steps as error
         Object.keys(steps).forEach(step => {
@@ -225,7 +229,7 @@ export const ClientForm = ({ onSuccess }: ClientFormProps) => {
         });
         toast.error(`There was an error setting up the Dialpad integration: ${error.message}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating client:", error);
       toast.error(`There was an error creating the client: ${error.message}`);
     } finally {
