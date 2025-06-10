@@ -1,4 +1,3 @@
-
 import { User } from "@/types";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -54,30 +53,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Query the profiles table directly using rpc or a custom query
+      // Query the profiles table directly with proper typing
       const { data, error } = await supabase
-        .rpc('get_user_profile', { user_id: userId });
+        .from('profiles' as any)
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
       if (error) {
-        // If RPC fails, try direct query
-        const { data: directData, error: directError } = await supabase
-          .from('profiles' as any)
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (directError) throw directError;
-        
-        if (directData) {
-          setUser({
-            id: userId,
-            email: session?.user?.email || '',
-            name: directData.name || session?.user?.email?.split('@')[0] || 'User',
-            role: (directData.role as 'admin' | 'client' | 'agency') || 'client',
-            clientId: directData.client_id || undefined,
-            agencyId: directData.agency_id || undefined
-          });
-        }
+        console.error('Error fetching user profile:', error);
+        // If profile doesn't exist, create a basic user object
+        setUser({
+          id: userId,
+          email: session?.user?.email || '',
+          name: session?.user?.email?.split('@')[0] || 'User',
+          role: 'client',
+          clientId: undefined,
+          agencyId: undefined
+        });
       } else if (data) {
         setUser({
           id: userId,
@@ -87,10 +80,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           clientId: data.client_id || undefined,
           agencyId: data.agency_id || undefined
         });
+      } else {
+        // No profile found, create a basic user object
+        setUser({
+          id: userId,
+          email: session?.user?.email || '',
+          name: session?.user?.email?.split('@')[0] || 'User',
+          role: 'client',
+          clientId: undefined,
+          agencyId: undefined
+        });
       }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      // Fallback to basic user object
+      setUser({
+        id: userId,
+        email: session?.user?.email || '',
+        name: session?.user?.email?.split('@')[0] || 'User',
+        role: 'client',
+        clientId: undefined,
+        agencyId: undefined
+      });
       setLoading(false);
     }
   };
