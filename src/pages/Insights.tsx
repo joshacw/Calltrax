@@ -61,9 +61,7 @@ const Insights = () => {
   return <Layout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Performance Insights</h1>
-        <p className="text-muted-foreground">
-          AI-powered analysis of call center performance metrics across accounts and agencies.
-        </p>
+        <p className="text-muted-foreground">AI-powered analysis of call center performance metrics across all clients.</p>
         
         {insights.length === 0 ? <Card className="p-6">
             <div className="text-center text-muted-foreground">
