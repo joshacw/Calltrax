@@ -38,7 +38,7 @@ const Insights = () => {
       
       const allInsights = allClients.map(client => {
         const clientAgencies = getAgenciesByClientId(client.id);
-        const insights = generateInsightsForClient(client.id, clientAgencies);
+        const insights = generateInsightsForClient(client.id, client.name, clientAgencies);
         
         return {
           clientName: client.name,
@@ -52,7 +52,7 @@ const Insights = () => {
       const client = getClientById(user.clientId);
       if (client) {
         const clientAgencies = getAgenciesByClientId(client.id);
-        const insights = generateInsightsForClient(client.id, clientAgencies);
+        const insights = generateInsightsForClient(client.id, client.name, clientAgencies);
         
         setClientInsights([{
           clientName: client.name,
@@ -67,7 +67,7 @@ const Insights = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Performance Insights</h1>
         <p className="text-muted-foreground">
-          AI-powered analysis of call center performance metrics across accounts and locations.
+          AI-powered analysis of call center performance metrics across accounts and agencies.
         </p>
         
         {clientInsights.length === 0 ? (
@@ -102,7 +102,7 @@ const ClientInsightSection = ({
       <CardHeader className="bg-muted/50">
         <CardTitle>{clientName}</CardTitle>
         <CardDescription>
-          Performance insights for all locations and agencies
+          Performance insights for all agencies and teams
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
@@ -144,7 +144,7 @@ const InsightItem = ({ insight }: { insight: InsightItem }) => {
           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
             {insight.source && (
               <span className="flex items-center">
-                <MapPin className="h-3 w-3 mr-1" />
+                <Award className="h-3 w-3 mr-1" />
                 {insight.source}
               </span>
             )}
@@ -171,25 +171,8 @@ const InsightItem = ({ insight }: { insight: InsightItem }) => {
   );
 };
 
-// Helper component for the source icon
-const MapPin = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
-
 // Function to generate insights for a client
-const generateInsightsForClient = (clientId: string, agencies: any[]): InsightItem[] => {
+const generateInsightsForClient = (clientId: string, clientName: string, agencies: any[]): InsightItem[] => {
   const insights: InsightItem[] = [];
   
   // Get metrics for comparison
@@ -201,40 +184,37 @@ const generateInsightsForClient = (clientId: string, agencies: any[]): InsightIt
   
   // Add insights for each agency
   agencies.forEach(agency => {
-    // Connection rate insight based on location
-    agency.locations.forEach((location: string) => {
-      // Simulate varying connection rates for different locations
-      const connectionRate = Math.round(Math.random() * 30 + 40); // 40-70%
-      const prevConnectionRate = connectionRate + (Math.random() > 0.5 ? -1 : 1) * Math.round(Math.random() * 15); // +/- 15%
-      const connectionRateDiff = connectionRate - prevConnectionRate;
-      
-      if (Math.abs(connectionRateDiff) > 5) {
-        insights.push({
-          type: connectionRateDiff > 0 ? "success" : "warning",
-          title: `${location} Connection Rate ${connectionRateDiff > 0 ? "Improving" : "Declining"}`,
-          description: `Connection rate ${connectionRateDiff > 0 ? "increased" : "decreased"} by ${Math.abs(connectionRateDiff).toFixed(1)}% compared to previous period.`,
-          source: location,
-          metric: "Connection Rate",
-          change: connectionRateDiff
-        });
-      }
-      
-      // Booking rate insight
-      const bookingRate = Math.round(Math.random() * 20 + 20); // 20-40%
-      const prevBookingRate = bookingRate + (Math.random() > 0.6 ? -1 : 1) * Math.round(Math.random() * 10); // +/- 10%
-      const bookingRateDiff = bookingRate - prevBookingRate;
-      
-      if (Math.abs(bookingRateDiff) > 3) {
-        insights.push({
-          type: bookingRateDiff > 0 ? "success" : "warning",
-          title: `${location} Booking Rate ${bookingRateDiff > 0 ? "Improving" : "Declining"}`,
-          description: `Booking rate ${bookingRateDiff > 0 ? "increased" : "decreased"} by ${Math.abs(bookingRateDiff).toFixed(1)}% compared to previous period.`,
-          source: location,
-          metric: "Booking Rate",
-          change: bookingRateDiff
-        });
-      }
-    });
+    // Connection rate insight
+    const connectionRate = Math.round(Math.random() * 30 + 40); // 40-70%
+    const prevConnectionRate = connectionRate + (Math.random() > 0.5 ? -1 : 1) * Math.round(Math.random() * 15); // +/- 15%
+    const connectionRateDiff = connectionRate - prevConnectionRate;
+    
+    if (Math.abs(connectionRateDiff) > 5) {
+      insights.push({
+        type: connectionRateDiff > 0 ? "success" : "warning",
+        title: `${agency.name} Connection Rate ${connectionRateDiff > 0 ? "Improving" : "Declining"}`,
+        description: `Connection rate ${connectionRateDiff > 0 ? "increased" : "decreased"} by ${Math.abs(connectionRateDiff).toFixed(1)}% compared to previous period.`,
+        source: agency.name,
+        metric: "Connection Rate",
+        change: connectionRateDiff
+      });
+    }
+    
+    // Booking rate insight
+    const bookingRate = Math.round(Math.random() * 20 + 20); // 20-40%
+    const prevBookingRate = bookingRate + (Math.random() > 0.6 ? -1 : 1) * Math.round(Math.random() * 10); // +/- 10%
+    const bookingRateDiff = bookingRate - prevBookingRate;
+    
+    if (Math.abs(bookingRateDiff) > 3) {
+      insights.push({
+        type: bookingRateDiff > 0 ? "success" : "warning",
+        title: `${agency.name} Booking Rate ${bookingRateDiff > 0 ? "Improving" : "Declining"}`,
+        description: `Booking rate ${bookingRateDiff > 0 ? "increased" : "decreased"} by ${Math.abs(bookingRateDiff).toFixed(1)}% compared to previous period.`,
+        source: agency.name,
+        metric: "Booking Rate",
+        change: bookingRateDiff
+      });
+    }
     
     // Agency-level insights
     const agencyPerformance = Math.random();
@@ -255,14 +235,13 @@ const generateInsightsForClient = (clientId: string, agencies: any[]): InsightIt
     }
     
     // Speed to lead insights
-    const randomLocation = agency.locations[Math.floor(Math.random() * agency.locations.length)];
     const speedToLeadImprovement = Math.random() > 0.5;
     
     insights.push({
       type: speedToLeadImprovement ? "success" : "warning",
-      title: `${randomLocation} Speed to Lead ${speedToLeadImprovement ? "Improving" : "Declining"}`,
+      title: `${agency.name} Speed to Lead ${speedToLeadImprovement ? "Improving" : "Declining"}`,
       description: `Average speed to lead ${speedToLeadImprovement ? "decreased" : "increased"} by ${(Math.random() * 2 + 1).toFixed(1)} minutes compared to previous week.`,
-      source: randomLocation,
+      source: agency.name,
       metric: "Speed to Lead",
       change: speedToLeadImprovement ? (Math.random() * 15 + 5) : -(Math.random() * 15 + 5)
     });
@@ -271,8 +250,9 @@ const generateInsightsForClient = (clientId: string, agencies: any[]): InsightIt
   // Client-level insights
   insights.push({
     type: "info",
-    title: `${clientId === "1" ? "ABC Company" : "XYZ Corp"} Weekly Summary`,
+    title: `${clientName} Weekly Summary`,
     description: `Overall call volume increased by ${Math.floor(Math.random() * 20 + 5)}% this week with ${Math.floor(Math.random() * 10 + 40)}% connection rate.`,
+    source: clientName
   });
   
   return insights;

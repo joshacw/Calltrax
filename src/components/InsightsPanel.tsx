@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,31 +77,31 @@ export const InsightsPanel = () => {
       });
     }
     
-    // Add preset insights for demo purposes
+    // Add preset insights for demo purposes (updated to reference clients instead of locations)
     generatedInsights.push(
       {
         type: "warning",
-        title: "ABC North Connection Rate Declining",
+        title: "ABC Company Connection Rate Declining",
         description: "Connection rate dropped 12% compared to previous period. Consider reviewing team training and call scripts.",
-        source: "ABC North"
+        source: "ABC Company"
       },
       {
         type: "success",
-        title: "XYZ East Exceeding Targets",
+        title: "XYZ Corp Exceeding Targets",
         description: "Booking rate is 18% above target. Team performance is exceptional with 84% connection rate.",
-        source: "XYZ East"
+        source: "XYZ Corp"
       },
       {
         type: "info",
-        title: "Miami Location Showing Improvement",
+        title: "ABC Company Showing Improvement",
         description: "Speed to lead improved by 24% in the last 7 days after process changes.",
-        source: "Miami"
+        source: "ABC Company"
       },
       {
         type: "warning",
-        title: "Chicago Team Performance",
+        title: "XYZ Corp Team Performance",
         description: "Average call duration is below the recommended minimum. Recommend quality review.",
-        source: "Chicago"
+        source: "XYZ Corp"
       }
     );
     
@@ -263,7 +262,7 @@ const InsightItem = ({ insight }: { insight: InsightItem }) => {
           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
             {insight.source && (
               <span className="flex items-center">
-                <MapPin className="h-3 w-3 mr-1" />
+                <Award className="h-3 w-3 mr-1" />
                 {insight.source}
               </span>
             )}
