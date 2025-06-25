@@ -1,3 +1,4 @@
+
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,16 +29,19 @@ const Insights = () => {
 
     // Fetch insights based on user role
     if (user?.role === "admin") {
-      // For admin, get insights for all clients
+      // For admin, get insights for 5 clients
       const allClients = [
         { id: "1", name: "ABC Company" },
-        { id: "2", name: "XYZ Corp" }
+        { id: "2", name: "XYZ Corp" },
+        { id: "3", name: "Tech Solutions Inc" },
+        { id: "4", name: "Global Marketing" },
+        { id: "5", name: "Premier Services" }
       ];
       
       allClients.forEach(client => {
         const clientAgencies = getAgenciesByClientId(client.id);
         const clientInsights = generateInsightsForClient(client.id, client.name, clientAgencies);
-        allInsights.push(...clientInsights);
+        allInsights.push(...clientInsights.slice(0, 1)); // Only take 1 insight per client
       });
       
     } else if (user?.role === "client" && user.clientId) {
@@ -46,11 +50,12 @@ const Insights = () => {
       if (client) {
         const clientAgencies = getAgenciesByClientId(client.id);
         const clientInsights = generateInsightsForClient(client.id, client.name, clientAgencies);
-        allInsights.push(...clientInsights);
+        allInsights.push(...clientInsights.slice(0, 5)); // Show up to 5 insights for client view
       }
     }
 
-    setInsights(allInsights);
+    // Limit to exactly 5 insights
+    setInsights(allInsights.slice(0, 5));
   }, [user]);
 
   return (
@@ -70,13 +75,13 @@ const Insights = () => {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>All Performance Insights</CardTitle>
+              <CardTitle>Performance Insights</CardTitle>
               <CardDescription>
-                Combined insights across all accounts and agencies
+                Key insights across all accounts and agencies
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {insights.map((insight, index) => (
                   <InsightItem key={index} insight={insight} />
                 ))}
