@@ -1,7 +1,8 @@
+
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FilterOptions } from "@/types";
-import { getAgenciesByClientId, getLocationsByClientId, getTeamMembers, getDispositions } from "@/services/mockData";
+import { getAgenciesByClientId, getTeamMembers, getDispositions } from "@/services/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Filter, Users, CheckSquare } from "lucide-react";
@@ -14,13 +15,11 @@ interface DashboardFilterProps {
 
 export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
   const { user } = useAuth();
-  const [agencies, setAgencies] = useState<{ id: string; name: string }[]>([]);
-  const [locations, setLocations] = useState<string[]>([]);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
   const [dispositions, setDispositions] = useState<string[]>([]);
   
-  const [selectedAgencies, setSelectedAgencies] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<string[]>([]);
   const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
   const [showAppointmentOnly, setShowAppointmentOnly] = useState<boolean>(false);
@@ -32,31 +31,16 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
   useEffect(() => {
     // Load available filter options
     if (user) {
-      if (user.clientId) {
-        const clientAgencies = getAgenciesByClientId(user.clientId);
-        setAgencies(clientAgencies.map(a => ({ id: a.id, name: a.name })));
-        
-        const clientLocations = getLocationsByClientId(user.clientId);
-        setLocations(clientLocations);
-      } else if (user.role === 'admin') {
-        // Admin can see all agencies and locations
-        setAgencies([
-          { id: "1", name: "ABC North" },
-          { id: "2", name: "ABC South" },
-          { id: "3", name: "XYZ West" },
-          { id: "4", name: "XYZ East" },
+      if (user.role === 'admin') {
+        // Admin can see all clients
+        setClients([
+          { id: "1", name: "ABC Company" },
+          { id: "2", name: "XYZ Corp" },
         ]);
-        
-        setLocations([
-          "New York", "Boston", "Miami", "Atlanta", 
-          "Los Angeles", "San Francisco", "Chicago", "Philadelphia"
-        ]);
-      } else if (user.role === 'agency' && user.agencyId) {
-        // Agency users can only see their own locations
-        const agency = getAgenciesByClientId(user.agencyId)[0];
-        if (agency) {
-          setLocations(agency.locations);
-        }
+      } else if (user.clientId) {
+        // Client users can only see their own company
+        const clientName = user.clientId === "1" ? "ABC Company" : "XYZ Corp";
+        setClients([{ id: user.clientId, name: clientName }]);
       }
       
       // Load team members and dispositions
@@ -68,8 +52,8 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
   useEffect(() => {
     // Update filters when selections change
     onFilterChange({
-      agencies: selectedAgencies,
-      locations: selectedLocations,
+      agencies: selectedClients, // Keep the same property name for backend compatibility
+      locations: [], // Remove locations from filtering
       teamMembers: selectedTeamMembers,
       dateRange,
       dispositions: showAppointmentOnly 
@@ -77,8 +61,7 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
         : selectedDispositions,
     });
   }, [
-    selectedAgencies, 
-    selectedLocations, 
+    selectedClients, 
     selectedTeamMembers, 
     selectedDispositions,
     showAppointmentOnly,
@@ -96,8 +79,7 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
     });
   };
 
-  const allAgencies = selectedAgencies.length === 0 || selectedAgencies.length === agencies.length;
-  const allLocations = selectedLocations.length === 0 || selectedLocations.length === locations.length;
+  const allClients = selectedClients.length === 0 || selectedClients.length === clients.length;
   const allTeamMembers = selectedTeamMembers.length === 0 || selectedTeamMembers.length === teamMembers.length;
   
   return (
@@ -112,47 +94,27 @@ export const DashboardFilter = ({ onFilterChange }: DashboardFilterProps) => {
         <div className="space-y-4">
           {/* Left Column */}
           <div className="grid grid-cols-1 gap-4">
-            {/* Show agency filter only for admin users */}
+            {/* Show client filter only for admin users */}
             {user?.role === "admin" && (
               <div>
-                <Label className="mb-1 block">Agency</Label>
+                <Label className="mb-1 block">Client</Label>
                 <Select
-                  onValueChange={(value) => setSelectedAgencies(value ? [value] : [])}
+                  onValueChange={(value) => setSelectedClients(value ? [value] : [])}
                   defaultValue="all">
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All Agencies" />
+                    <SelectValue placeholder="All Clients" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Agencies</SelectItem>
-                    {agencies.map((agency) => (
-                      <SelectItem key={agency.id} value={agency.id}>
-                        {agency.name}
+                    <SelectItem value="all">All Clients</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
-            
-            {/* Location filter for all user types */}
-            <div>
-              <Label className="mb-1 block">Location</Label>
-              <Select
-                onValueChange={(value) => setSelectedLocations(value ? [value] : [])}
-                defaultValue="all">
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {locations.map((location) => (
-                    <SelectItem key={location} value={location}>
-                      {location}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
         
