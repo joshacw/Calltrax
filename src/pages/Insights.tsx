@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,12 +21,11 @@ interface InsightItem {
 
 const Insights = () => {
   const { user } = useAuth();
-  const [clientInsights, setClientInsights] = useState<{
-    clientName: string;
-    insights: InsightItem[];
-  }[]>([]);
+  const [insights, setInsights] = useState<InsightItem[]>([]);
 
   useEffect(() => {
+    const allInsights: InsightItem[] = [];
+
     // Fetch insights based on user role
     if (user?.role === "admin") {
       // For admin, get insights for all clients
@@ -36,30 +34,23 @@ const Insights = () => {
         { id: "2", name: "XYZ Corp" }
       ];
       
-      const allInsights = allClients.map(client => {
+      allClients.forEach(client => {
         const clientAgencies = getAgenciesByClientId(client.id);
-        const insights = generateInsightsForClient(client.id, client.name, clientAgencies);
-        
-        return {
-          clientName: client.name,
-          insights
-        };
+        const clientInsights = generateInsightsForClient(client.id, client.name, clientAgencies);
+        allInsights.push(...clientInsights);
       });
       
-      setClientInsights(allInsights);
     } else if (user?.role === "client" && user.clientId) {
       // For client, get insights only for their account
       const client = getClientById(user.clientId);
       if (client) {
         const clientAgencies = getAgenciesByClientId(client.id);
-        const insights = generateInsightsForClient(client.id, client.name, clientAgencies);
-        
-        setClientInsights([{
-          clientName: client.name,
-          insights
-        }]);
+        const clientInsights = generateInsightsForClient(client.id, client.name, clientAgencies);
+        allInsights.push(...clientInsights);
       }
     }
+
+    setInsights(allInsights);
   }, [user]);
 
   return (
@@ -70,49 +61,31 @@ const Insights = () => {
           AI-powered analysis of call center performance metrics across accounts and agencies.
         </p>
         
-        {clientInsights.length === 0 ? (
+        {insights.length === 0 ? (
           <Card className="p-6">
             <div className="text-center text-muted-foreground">
               No insights available for your account at this time.
             </div>
           </Card>
         ) : (
-          clientInsights.map((clientData, index) => (
-            <ClientInsightSection 
-              key={index} 
-              clientName={clientData.clientName} 
-              insights={clientData.insights} 
-            />
-          ))
+          <Card>
+            <CardHeader>
+              <CardTitle>All Performance Insights</CardTitle>
+              <CardDescription>
+                Combined insights across all accounts and agencies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {insights.map((insight, index) => (
+                  <InsightItem key={index} insight={insight} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </Layout>
-  );
-};
-
-const ClientInsightSection = ({ 
-  clientName, 
-  insights 
-}: { 
-  clientName: string, 
-  insights: InsightItem[] 
-}) => {
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader className="bg-muted/50">
-        <CardTitle>{clientName}</CardTitle>
-        <CardDescription>
-          Performance insights for all agencies and teams
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {insights.map((insight, index) => (
-            <InsightItem key={index} insight={insight} />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
   );
 };
 
