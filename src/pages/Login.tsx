@@ -195,18 +195,6 @@ const Login = () => {
             </form>
           </TabsContent>
         </Tabs>
-        
-        <div className="p-4 text-xs text-gray-500 border-t">
-          <p className="mb-1">Demo Credentials:</p>
-          <p>Admin: <span className="font-medium">admin@calltrax.com</span> / <span className="font-medium">password</span></p>
-          <p>Client: <span className="font-medium">client1@example.com</span> / <span className="font-medium">password</span></p>
-          <p className="mt-1 text-xs text-blue-500 cursor-pointer" onClick={() => {
-            setEmail("admin@calltrax.com");
-            setPassword("password");
-          }}>
-            Click to autofill admin credentials
-          </p>
-        </div>
       </Card>
     </div>
   );
