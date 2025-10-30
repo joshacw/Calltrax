@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [metrics, setMetrics] = useState(getDashboardMetrics());
   const [weekData] = useState(getWeekToDateData());
   const [monthData] = useState(getMonthToDateData());
+  const [statsTimeRange, setStatsTimeRange] = useState<"week" | "month">("week");
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
     agencies: [],
     locations: [],
@@ -54,6 +55,13 @@ const Dashboard = () => {
     });
   };
   
+  // Calculate stats based on selected time range
+  const statsData = statsTimeRange === "week" ? weekData : monthData;
+  const totalLeads = statsData.reduce((sum, day) => sum + (day.leads || 0), 0);
+  const totalCalls = statsData.reduce((sum, day) => sum + (day.calls || 0), 0);
+  const totalConnections = statsData.reduce((sum, day) => sum + (day.connections || 0), 0);
+  const totalAppointments = statsData.reduce((sum, day) => sum + (day.appointments || 0), 0);
+  
   return (
     <Layout>
       <div>
@@ -79,12 +87,12 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Week to date chart */}
           <div className="bg-white p-4 rounded-md border border-gray-100">
-            <PerformanceChart data={weekData} title="Week to Date Performance" />
+            <PerformanceChart data={weekData} title="Week to Date" />
           </div>
           
           {/* Month to date chart */}
           <div className="bg-white p-4 rounded-md border border-gray-100">
-            <PerformanceChart data={monthData} title="Month to Date Performance" />
+            <PerformanceChart data={monthData} title="Month to Date" />
           </div>
         </div>
         
@@ -112,23 +120,45 @@ const Dashboard = () => {
           />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard 
-            title="Number of Leads" 
-            value={metrics.numberOfLeads} 
-          />
-          <StatCard 
-            title="Number of Calls" 
-            value={metrics.numberOfCalls} 
-          />
-          <StatCard 
-            title="Number of Conversations" 
-            value={metrics.numberOfConversations} 
-          />
-          <StatCard 
-            title="Number of Appointments" 
-            value={metrics.numberOfAppointments} 
-          />
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Stats Time Range:</span>
+            <div className="flex gap-2">
+              <Button
+                variant={statsTimeRange === "week" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatsTimeRange("week")}
+              >
+                Week
+              </Button>
+              <Button
+                variant={statsTimeRange === "month" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatsTimeRange("month")}
+              >
+                Month
+              </Button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard 
+              title="Number of Leads" 
+              value={totalLeads} 
+            />
+            <StatCard 
+              title="Number of Calls" 
+              value={totalCalls} 
+            />
+            <StatCard 
+              title="Number of Conversations" 
+              value={totalConnections} 
+            />
+            <StatCard 
+              title="Number of Appointments" 
+              value={totalAppointments} 
+            />
+          </div>
         </div>
       </div>
     </Layout>

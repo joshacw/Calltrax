@@ -3,7 +3,6 @@ import { GraphDataPoint } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import { format, parseISO } from "date-fns";
 import { useState, useEffect } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Toggle } from "@/components/ui/toggle";
 
 interface PerformanceChartProps {
@@ -12,15 +11,13 @@ interface PerformanceChartProps {
 }
 
 export const PerformanceChart = ({ data, title = "Performance Trends" }: PerformanceChartProps) => {
-  const [timeRange, setTimeRange] = useState<"week" | "month">("week");
   const [isCumulative, setIsCumulative] = useState(true);
   const [chartData, setChartData] = useState<GraphDataPoint[]>([]);
   
-  // Update chart data when time range or cumulative setting changes
+  // Update chart data when cumulative setting changes
   useEffect(() => {
-    // Filter data based on timeRange
     setChartData(data);
-  }, [data, timeRange, isCumulative]);
+  }, [data, isCumulative]);
   
   // Get current day for reference line
   const today = new Date();
@@ -30,24 +27,13 @@ export const PerformanceChart = ({ data, title = "Performance Trends" }: Perform
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <div className="flex items-center gap-4">
-          <ToggleGroup type="single" value={timeRange} onValueChange={(value) => value && setTimeRange(value as any)}>
-            <ToggleGroupItem value="week" aria-label="Week">
-              Week
-            </ToggleGroupItem>
-            <ToggleGroupItem value="month" aria-label="Month">
-              Month
-            </ToggleGroupItem>
-          </ToggleGroup>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Cumulative</span>
-            <Toggle 
-              pressed={isCumulative} 
-              onPressedChange={setIsCumulative}
-              aria-label="Toggle cumulative view"
-            />
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Cumulative</span>
+          <Toggle 
+            pressed={isCumulative} 
+            onPressedChange={setIsCumulative}
+            aria-label="Toggle cumulative view"
+          />
         </div>
       </div>
       
