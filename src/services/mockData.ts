@@ -391,6 +391,110 @@ export const getMonthToDateData = (): GraphDataPoint[] => {
   return data;
 };
 
+// Helper function to get today's data
+export const getTodayData = (): GraphDataPoint[] => {
+  const today = new Date();
+  const dateStr = format(today, 'yyyy-MM-dd');
+  
+  const dailyBenchmarks = {
+    leads: 25,
+    calls: 40,
+    connections: 22,
+    appointments: 9
+  };
+  
+  return [{
+    date: dateStr,
+    leads: dailyBenchmarks.leads,
+    calls: dailyBenchmarks.calls,
+    connections: dailyBenchmarks.connections,
+    appointments: dailyBenchmarks.appointments,
+    leadsCumulative: dailyBenchmarks.leads,
+    callsCumulative: dailyBenchmarks.calls,
+    connectionsCumulative: dailyBenchmarks.connections,
+    appointmentsCumulative: dailyBenchmarks.appointments
+  }];
+};
+
+// Helper function to get yesterday's data
+export const getYesterdayData = (): GraphDataPoint[] => {
+  const yesterday = subDays(new Date(), 1);
+  const dateStr = format(yesterday, 'yyyy-MM-dd');
+  
+  const dailyBenchmarks = {
+    leads: 22,
+    calls: 38,
+    connections: 20,
+    appointments: 8
+  };
+  
+  return [{
+    date: dateStr,
+    leads: dailyBenchmarks.leads,
+    calls: dailyBenchmarks.calls,
+    connections: dailyBenchmarks.connections,
+    appointments: dailyBenchmarks.appointments,
+    leadsCumulative: dailyBenchmarks.leads,
+    callsCumulative: dailyBenchmarks.calls,
+    connectionsCumulative: dailyBenchmarks.connections,
+    appointmentsCumulative: dailyBenchmarks.appointments
+  }];
+};
+
+// Helper function to get all-time data (last 30 days)
+export const getAllData = (): GraphDataPoint[] => {
+  const data: GraphDataPoint[] = [];
+  const today = new Date();
+  
+  const dailyBenchmarks = {
+    leads: 20,
+    calls: 35,
+    connections: 18,
+    appointments: 7
+  };
+
+  let cumulativeLeads = 0;
+  let cumulativeCalls = 0;
+  let cumulativeConnections = 0;
+  let cumulativeAppointments = 0;
+  
+  // Generate data for last 30 days
+  for (let i = 29; i >= 0; i--) {
+    const currentDate = subDays(today, i);
+    
+    const randomFactor = 0.7 + Math.random() * 0.6;
+    const dayOfWeek = currentDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const weekendFactor = isWeekend ? 0.4 : 1;
+    
+    const leads = Math.round(dailyBenchmarks.leads * randomFactor * weekendFactor);
+    const calls = Math.round(dailyBenchmarks.calls * randomFactor * weekendFactor);
+    const connections = Math.round(dailyBenchmarks.connections * randomFactor * weekendFactor);
+    const appointments = Math.round(dailyBenchmarks.appointments * randomFactor * weekendFactor);
+    
+    cumulativeLeads += leads;
+    cumulativeCalls += calls;
+    cumulativeConnections += connections;
+    cumulativeAppointments += appointments;
+    
+    const dateStr = format(currentDate, 'yyyy-MM-dd');
+    
+    data.push({
+      date: dateStr,
+      leads: leads,
+      calls: calls,
+      connections: connections,
+      appointments: appointments,
+      leadsCumulative: cumulativeLeads,
+      callsCumulative: cumulativeCalls,
+      connectionsCumulative: cumulativeConnections,
+      appointmentsCumulative: cumulativeAppointments
+    });
+  }
+  
+  return data;
+};
+
 // Get filtered leads
 export const getFilteredLeads = (
   agencyIds?: string[],

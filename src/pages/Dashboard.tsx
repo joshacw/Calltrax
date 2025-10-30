@@ -3,7 +3,7 @@ import { DashboardFilter } from "@/components/DashboardFilter";
 import { Layout } from "@/components/Layout";
 import { MetricCard, StatCard } from "@/components/MetricCard";
 import { InsightsPanel } from "@/components/InsightsPanel";
-import { getDashboardMetrics, getMonthToDateData, getWeekToDateData } from "@/services/mockData";
+import { getDashboardMetrics, getMonthToDateData, getWeekToDateData, getTodayData, getYesterdayData, getAllData } from "@/services/mockData";
 import { FilterOptions } from "@/types";
 import { useState } from "react";
 import { PerformanceChart } from "@/components/PerformanceChart";
@@ -11,13 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Share } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState(getDashboardMetrics());
   const [weekData] = useState(getWeekToDateData());
   const [monthData] = useState(getMonthToDateData());
-  const [statsTimeRange, setStatsTimeRange] = useState<"week" | "month">("week");
+  const [todayData] = useState(getTodayData());
+  const [yesterdayData] = useState(getYesterdayData());
+  const [allData] = useState(getAllData());
+  const [selectedDateRange, setSelectedDateRange] = useState<"week" | "month" | "today" | "yesterday" | "all">("week");
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>({
     agencies: [],
     locations: [],
@@ -55,8 +59,19 @@ const Dashboard = () => {
     });
   };
   
-  // Calculate stats based on selected time range
-  const statsData = statsTimeRange === "week" ? weekData : monthData;
+  // Get data based on selected date range
+  const getDataForRange = () => {
+    switch (selectedDateRange) {
+      case "today": return todayData;
+      case "yesterday": return yesterdayData;
+      case "month": return monthData;
+      case "all": return allData;
+      case "week":
+      default: return weekData;
+    }
+  };
+  
+  const statsData = getDataForRange();
   const totalLeads = statsData.reduce((sum, day) => sum + (day.leads || 0), 0);
   const totalCalls = statsData.reduce((sum, day) => sum + (day.calls || 0), 0);
   const totalConnections = statsData.reduce((sum, day) => sum + (day.connections || 0), 0);
@@ -84,15 +99,42 @@ const Dashboard = () => {
         
         {user?.role === "admin" && <InsightsPanel />}
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Week to date chart */}
           <div className="bg-white p-4 rounded-md border border-gray-100">
-            <PerformanceChart data={weekData} title="Week to Date" />
+            <PerformanceChart 
+              data={weekData} 
+              title="Week to Date" 
+              isActive={selectedDateRange === "week"}
+            />
           </div>
           
           {/* Month to date chart */}
           <div className="bg-white p-4 rounded-md border border-gray-100">
-            <PerformanceChart data={monthData} title="Month to Date" />
+            <PerformanceChart 
+              data={monthData} 
+              title="Month to Date"
+              isActive={selectedDateRange === "month"}
+            />
+          </div>
+        </div>
+        
+        {/* Date Range Selector */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium">View:</label>
+            <Select value={selectedDateRange} onValueChange={(value: any) => setSelectedDateRange(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="week">Week to Date</SelectItem>
+                <SelectItem value="month">Month to Date</SelectItem>
+                <SelectItem value="all">All Time (30 days)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
@@ -120,28 +162,7 @@ const Dashboard = () => {
           />
         </div>
         
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Stats Time Range:</span>
-            <div className="flex gap-2">
-              <Button
-                variant={statsTimeRange === "week" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatsTimeRange("week")}
-              >
-                Week
-              </Button>
-              <Button
-                variant={statsTimeRange === "month" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatsTimeRange("month")}
-              >
-                Month
-              </Button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard 
               title="Number of Leads" 
               value={totalLeads} 
@@ -158,7 +179,6 @@ const Dashboard = () => {
               title="Number of Appointments" 
               value={totalAppointments} 
             />
-          </div>
         </div>
       </div>
     </Layout>

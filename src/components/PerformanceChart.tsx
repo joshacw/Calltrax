@@ -3,14 +3,16 @@ import { GraphDataPoint } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import { format, parseISO } from "date-fns";
 import { useState, useEffect } from "react";
-import { Toggle } from "@/components/ui/toggle";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PerformanceChartProps {
   data: GraphDataPoint[];
   title?: string;
+  isActive?: boolean;
 }
 
-export const PerformanceChart = ({ data, title = "Performance Trends" }: PerformanceChartProps) => {
+export const PerformanceChart = ({ data, title = "Performance Trends", isActive = false }: PerformanceChartProps) => {
   const [isCumulative, setIsCumulative] = useState(true);
   const [chartData, setChartData] = useState<GraphDataPoint[]>([]);
   
@@ -24,16 +26,29 @@ export const PerformanceChart = ({ data, title = "Performance Trends" }: Perform
   const todayStr = format(today, 'yyyy-MM-dd');
   
   return (
-    <div className="w-full">
+    <div className={cn(
+      "w-full transition-all",
+      isActive && "ring-2 ring-primary rounded-lg p-2"
+    )}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Cumulative</span>
-          <Toggle 
-            pressed={isCumulative} 
-            onPressedChange={setIsCumulative}
-            aria-label="Toggle cumulative view"
-          />
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+          <Button
+            variant={isCumulative ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setIsCumulative(true)}
+            className="h-8 px-3"
+          >
+            Cumulative
+          </Button>
+          <Button
+            variant={!isCumulative ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setIsCumulative(false)}
+            className="h-8 px-3"
+          >
+            Daily
+          </Button>
         </div>
       </div>
       
