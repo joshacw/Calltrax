@@ -20,6 +20,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Users, Phone, CalendarCheck, BarChart3, ExternalLink, LogIn, CalendarIcon } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { format } from 'date-fns';
+import {
+  getDateRangeForTenant,
+  getLocalDateKey,
+  formatInTenantTime
+} from '@/utils/timezone';
 
 interface DashboardMetrics {
   avgSpeedToLead: number;
@@ -78,56 +83,10 @@ const DATE_RANGE_OPTIONS: { value: DateRangeOption; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
-function getDateRange(option: DateRangeOption, customRange?: { from: Date; to: Date }): { start: Date; end: Date; label: string } {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(today);
-  endOfToday.setHours(23, 59, 59, 999);
-
-  switch (option) {
-    case 'today': {
-      return { start: today, end: endOfToday, label: 'Today' };
-    }
-    case 'last_7_days': {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 6);
-      return { start, end: endOfToday, label: 'Last 7 Days' };
-    }
-    case 'last_30_days': {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 29);
-      return { start, end: endOfToday, label: 'Last 30 Days' };
-    }
-    case 'last_90_days': {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 89);
-      return { start, end: endOfToday, label: 'Last 90 Days' };
-    }
-    case 'custom': {
-      if (customRange) {
-        const start = new Date(customRange.from);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(customRange.to);
-        end.setHours(23, 59, 59, 999);
-        const label = `${customRange.from.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })} - ${customRange.to.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}`;
-        return { start, end, label };
-      }
-      // Default to last 30 days if no custom range provided
-      const defaultStart = new Date(today);
-      defaultStart.setDate(today.getDate() - 29);
-      return { start: defaultStart, end: endOfToday, label: 'Last 30 Days' };
-    }
-    default:
-      const defaultStart = new Date(today);
-      defaultStart.setDate(today.getDate() - 29);
-      return { start: defaultStart, end: endOfToday, label: 'Last 30 Days' };
-  }
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { selectedTenantId, isGlobalView, loading: tenantLoading } = useTenant();
+  const { selectedTenantId, selectedTenant, isGlobalView, loading: tenantLoading } = useTenant();
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -173,13 +132,23 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      const { start, end } = getDateRange(dateRange, customDateRange);
+      // Get tenant timezone or default to Sydney
+      const tenantTimezone = selectedTenant?.timezone || 'Australia/Sydney';
 
-      // Get today's date range for callsToday metric
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const todayEnd = new Date(todayStart);
-      todayEnd.setHours(23, 59, 59, 999);
+      const { start, end } = getDateRangeForTenant(
+        dateRange === 'today' ? 'today' :
+        dateRange === 'last_7_days' ? '7days' :
+        dateRange === 'last_30_days' ? '30days' :
+        dateRange === 'last_90_days' ? '90days' :
+        'custom',
+        tenantTimezone,
+        customDateRange
+      );
+
+      // Get today's date range for callsToday metric in tenant timezone
+      const todayRange = getDateRangeForTenant('today', tenantTimezone);
+      const todayStart = todayRange.start;
+      const todayEnd = todayRange.end;
 
       let leadsQuery = supabase
         .from('leads')
@@ -304,25 +273,33 @@ export default function Dashboard() {
     }
   }
 
-  // Helper function to get local date string (YYYY-MM-DD in local timezone)
-  function getLocalDateString(date: Date | string): string {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
   async function fetchChartData(tenantId: string | null) {
     try {
-      const { start, end } = getDateRange(dateRange, customDateRange);
-      const today = new Date();
-      const todayStr = getLocalDateString(today);
+      // Get tenant timezone or default to Sydney
+      const tenantTimezone = selectedTenant?.timezone || 'Australia/Sydney';
 
-      console.log('=== CHART DATA FETCH ===');
-      console.log('Date range:', { start: start.toISOString(), end: end.toISOString() });
+      const { start, end } = getDateRangeForTenant(
+        dateRange === 'today' ? 'today' :
+        dateRange === 'last_7_days' ? '7days' :
+        dateRange === 'last_30_days' ? '30days' :
+        dateRange === 'last_90_days' ? '90days' :
+        'custom',
+        tenantTimezone,
+        customDateRange
+      );
+
+      const today = new Date();
+      const todayStr = getLocalDateKey(today, tenantTimezone);
+
+      console.log('=== TIMEZONE-AWARE DATE RANGE ===');
+      console.log('Tenant timezone:', tenantTimezone);
+      console.log('Query range (UTC):', { start: start.toISOString(), end: end.toISOString() });
+      console.log('Display range (local):', {
+        start: formatInTenantTime(start, tenantTimezone, 'yyyy-MM-dd HH:mm'),
+        end: formatInTenantTime(end, tenantTimezone, 'yyyy-MM-dd HH:mm')
+      });
       console.log('Selected tenant ID:', tenantId);
-      console.log('Today string (local):', todayStr);
+      console.log('Today string (tenant local):', todayStr);
 
       let leadsChartQuery = supabase
         .from('leads')
@@ -358,14 +335,11 @@ export default function Dashboard() {
       const currentDate = new Date(start);
       let foundTodayIndex: string | null = null;
 
-      // Create date buckets using LOCAL timezone
+      // Create date buckets using TENANT timezone
       while (currentDate <= end) {
-        const dateStr = getLocalDateString(currentDate);
+        const dateStr = getLocalDateKey(currentDate, tenantTimezone);
         const isToday = dateStr === todayStr;
-        const displayDate = currentDate.toLocaleDateString('en-AU', {
-          month: 'short',
-          day: 'numeric'
-        });
+        const displayDate = formatInTenantTime(currentDate, tenantTimezone, 'MMM d');
 
         if (isToday) {
           foundTodayIndex = displayDate;
@@ -385,12 +359,12 @@ export default function Dashboard() {
 
       setTodayIndex(foundTodayIndex);
 
-      console.log('Date buckets created:', Object.keys(dataByDate));
+      console.log('Date buckets created (tenant TZ):', Object.keys(dataByDate));
 
-      // Match leads using LOCAL timezone
+      // Match leads using TENANT timezone
       leads?.forEach(lead => {
-        const date = getLocalDateString(lead.created_at);
-        console.log('Lead created_at:', lead.created_at, '-> Local date:', date);
+        const date = getLocalDateKey(lead.created_at, tenantTimezone);
+        console.log('Lead created_at:', lead.created_at, '-> Tenant local date:', date);
         if (dataByDate[date]) {
           dataByDate[date].leads++;
         } else {
@@ -398,10 +372,10 @@ export default function Dashboard() {
         }
       });
 
-      // Match calls using LOCAL timezone
+      // Match calls using TENANT timezone
       calls?.forEach(call => {
-        const date = getLocalDateString(call.created_at);
-        console.log('Call created_at:', call.created_at, '-> Local date:', date);
+        const date = getLocalDateKey(call.created_at, tenantTimezone);
+        console.log('Call created_at:', call.created_at, '-> Tenant local date:', date);
         if (dataByDate[date]) {
           dataByDate[date].calls++;
           if (call.talk_time_seconds > 0 ||
@@ -458,7 +432,18 @@ export default function Dashboard() {
     setModalLoading(true);
     setModalData([]);
 
-    const { start, end } = getDateRange(dateRange);
+    // Get tenant timezone or default to Sydney
+    const tenantTimezone = selectedTenant?.timezone || 'Australia/Sydney';
+
+    const { start, end } = getDateRangeForTenant(
+      dateRange === 'today' ? 'today' :
+      dateRange === 'last_7_days' ? '7days' :
+      dateRange === 'last_30_days' ? '30days' :
+      dateRange === 'last_90_days' ? '90days' :
+      'custom',
+      tenantTimezone,
+      customDateRange
+    );
 
     try {
       if (type === 'leads') {
@@ -523,12 +508,8 @@ export default function Dashboard() {
 
   function formatDate(dateString: string): string {
     try {
-      return new Date(dateString).toLocaleDateString('en-AU', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      const tenantTimezone = selectedTenant?.timezone || 'Australia/Sydney';
+      return formatInTenantTime(dateString, tenantTimezone, 'd MMM, h:mm a');
     } catch {
       return '-';
     }
@@ -600,7 +581,14 @@ export default function Dashboard() {
     return { text: 'Poor', color: 'bg-red-100 text-red-800' };
   };
 
-  const { label: dateRangeLabel } = getDateRange(dateRange, customDateRange);
+  // Calculate date range label
+  const dateRangeLabel = dateRange === 'today' ? 'Today' :
+    dateRange === 'last_7_days' ? 'Last 7 Days' :
+    dateRange === 'last_30_days' ? 'Last 30 Days' :
+    dateRange === 'last_90_days' ? 'Last 90 Days' :
+    dateRange === 'custom' && customDateRange ?
+      `${customDateRange.from.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })} - ${customDateRange.to.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}` :
+      'Last 30 Days';
 
   const getXAxisInterval = () => {
     const len = chartData.length;

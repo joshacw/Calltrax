@@ -9,6 +9,7 @@ interface Tenant {
   id: string;
   name: string;
   slug: string;
+  timezone: string;
 }
 
 interface TenantContextType {
@@ -42,7 +43,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         // Get all tenants
         const { data: allTenants, error: tenantsError } = await supabase
           .from('tenants')
-          .select('id, name, slug')
+          .select('id, name, slug, timezone')
           .order('name');
 
         if (tenantsError) {
