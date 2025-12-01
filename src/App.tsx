@@ -26,6 +26,7 @@ import PublicDashboard from "./pages/PublicDashboard";
 import Insights from "./pages/Insights";
 import LeadDetails from "./pages/LeadDetails";
 import Tasks from "./pages/Tasks";
+import TenantsAdmin from "./pages/TenantsAdmin";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,12 @@ const App = () => (
             <Route path="/settings" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <Settings />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/tenants" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <TenantsAdmin />
               </ProtectedRoute>
             } />
 

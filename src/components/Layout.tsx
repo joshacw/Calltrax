@@ -8,7 +8,8 @@ import {
   Settings,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Building2
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,10 @@ const navigation = [
   { name: 'Tasks', href: '/tasks', icon: CalendarCheck },
   { name: 'Insights', href: '/insights', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+const adminNavigation = [
+  { name: 'Tenants', href: '/admin/tenants', icon: Building2 },
 ];
 
 // Named export to match existing imports: import { Layout } from "@/components/Layout"
@@ -120,6 +125,36 @@ export function Layout({ children }: { children?: React.ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Admin section - only for admins */}
+          {profile?.role === 'admin' && (
+            <>
+              <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 mt-6">
+                Admin
+              </p>
+              {adminNavigation.map((item) => {
+                const isActive = location.pathname === item.href ||
+                  (item.href !== '/' && location.pathname.startsWith(item.href));
+
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-orange-500/10 text-orange-500"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* User section */}
