@@ -54,19 +54,19 @@ const App = () => (
             <Route path="/dashboard/public/:dashboardId" element={<PublicDashboard />} />
 
             <Route path="/leads" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedRoles={["admin", "operator"]}>
                 <Leads />
               </ProtectedRoute>
             } />
 
             <Route path="/lead/:leadId" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedRoles={["admin", "operator"]}>
                 <LeadDetails />
               </ProtectedRoute>
             } />
 
             <Route path="/calls" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedRoles={["admin", "operator"]}>
                 <Calls />
               </ProtectedRoute>
             } />

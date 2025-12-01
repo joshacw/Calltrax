@@ -31,34 +31,73 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [selectedTenantId, setSelectedTenantIdState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch tenants from database
+  // Fetch tenants from database with access filtering
   useEffect(() => {
     async function fetchTenants() {
+      if (authLoading || !profile) {
+        return;
+      }
+
       try {
-        const { data, error } = await supabase
+        // Get all tenants
+        const { data: allTenants, error: tenantsError } = await supabase
           .from('tenants')
           .select('id, name, slug')
           .order('name');
 
-        if (error) {
-          console.error('Error fetching tenants:', error);
+        if (tenantsError) {
+          console.error('Error fetching tenants:', tenantsError);
           return;
         }
 
-        if (data) {
-          setTenants(data);
+        if (!allTenants) {
+          return;
         }
+
+        // Get user's session to access user ID
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          return;
+        }
+
+        // Query user_tenant_access table
+        const { data: accessData } = await supabase
+          .from('user_tenant_access')
+          .select('tenant_id')
+          .eq('user_id', user.id);
+
+        const accessibleTenantIds = accessData?.map(a => a.tenant_id) || [];
+
+        // Filter tenants based on access rules
+        let filteredTenants = allTenants;
+
+        if (profile.is_demo_account) {
+          // Demo accounts: only show accessible tenants
+          filteredTenants = allTenants.filter(t => accessibleTenantIds.includes(t.id));
+        } else if (profile.role === 'admin') {
+          // Non-demo admin: show all tenants
+          filteredTenants = allTenants;
+        } else if (profile.role === 'operator') {
+          // Operators: only show accessible tenants
+          filteredTenants = allTenants.filter(t => accessibleTenantIds.includes(t.id));
+        } else if (profile.role === 'client') {
+          // Clients: only their assigned tenant
+          filteredTenants = allTenants.filter(t => t.id === profile.tenant_id);
+        }
+
+        setTenants(filteredTenants);
       } catch (err) {
         console.error('Error in fetchTenants:', err);
       }
     }
 
     fetchTenants();
-  }, []);
+  }, [profile, authLoading]);
 
   // Initialize selected tenant based on role and localStorage
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || tenants.length === 0) {
       return;
     }
 
@@ -73,26 +112,39 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
 
-      if (stored === GLOBAL_VIEW_VALUE || !stored) {
+      // Only allow Global View if user has access to more than 1 tenant
+      if ((stored === GLOBAL_VIEW_VALUE || !stored) && tenants.length > 1) {
         // Global View
         setSelectedTenantIdState(null);
+      } else if (tenants.length === 1) {
+        // Only one tenant - auto-select it
+        setSelectedTenantIdState(tenants[0].id);
       } else {
-        // Specific tenant
+        // Specific tenant from localStorage
         setSelectedTenantIdState(stored);
       }
     } catch (err) {
       console.error('Error reading from localStorage:', err);
-      // Default to Global View on error
-      setSelectedTenantIdState(null);
+      // Default to Global View if multiple tenants, otherwise first tenant
+      if (tenants.length > 1) {
+        setSelectedTenantIdState(null);
+      } else if (tenants.length === 1) {
+        setSelectedTenantIdState(tenants[0].id);
+      }
     }
 
     setLoading(false);
-  }, [profile, authLoading]);
+  }, [profile, authLoading, tenants]);
 
   // Update localStorage when selection changes (except for client role)
   const setSelectedTenantId = (id: string | null) => {
     // Prevent client role from changing tenant
     if (profile?.role === 'client') {
+      return;
+    }
+
+    // Prevent Global View if user only has access to 1 tenant
+    if (id === null && tenants.length <= 1) {
       return;
     }
 

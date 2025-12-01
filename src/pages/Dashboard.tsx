@@ -15,13 +15,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Users, Phone, CalendarCheck, BarChart3, ExternalLink, LogIn } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Loader2, Users, Phone, CalendarCheck, BarChart3, ExternalLink, LogIn, CalendarIcon } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { format } from 'date-fns';
 
 interface DashboardMetrics {
   avgSpeedToLead: number;
   connectionRate: number;
   bookingRate: number;
+  callsToday: number;
+  leadsContacted: number;
+  responseRate: number;
   totalLeads: number;
   totalCalls: number;
   totalAppointments: number;
@@ -61,52 +67,26 @@ interface Call {
   } | null;
 }
 
-type DateRangeOption = 'week_to_date' | 'month_to_date' | 'this_week' | 'this_month' | 'last_7_days' | 'last_30_days' | 'all_time';
+type DateRangeOption = 'today' | 'last_7_days' | 'last_30_days' | 'last_90_days' | 'custom';
 type ModalType = 'leads' | 'calls' | 'appointments' | null;
 
 const DATE_RANGE_OPTIONS: { value: DateRangeOption; label: string }[] = [
-  { value: 'week_to_date', label: 'Week to Date' },
-  { value: 'month_to_date', label: 'Month to Date' },
-  { value: 'this_week', label: 'This Week' },
-  { value: 'this_month', label: 'This Month' },
+  { value: 'today', label: 'Today' },
   { value: 'last_7_days', label: 'Last 7 Days' },
   { value: 'last_30_days', label: 'Last 30 Days' },
-  { value: 'all_time', label: 'All Time' },
+  { value: 'last_90_days', label: 'Last 90 Days' },
+  { value: 'custom', label: 'Custom' },
 ];
 
-function getDateRange(option: DateRangeOption): { start: Date; end: Date; label: string } {
+function getDateRange(option: DateRangeOption, customRange?: { from: Date; to: Date }): { start: Date; end: Date; label: string } {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfToday = new Date(today);
   endOfToday.setHours(23, 59, 59, 999);
 
   switch (option) {
-    case 'week_to_date': {
-      const dayOfWeek = today.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - daysFromMonday);
-      return { start: startOfWeek, end: endOfToday, label: 'Week to Date' };
-    }
-    case 'month_to_date': {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { start: startOfMonth, end: endOfToday, label: 'Month to Date' };
-    }
-    case 'this_week': {
-      const dayOfWeek = today.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - daysFromMonday);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      return { start: startOfWeek, end: endOfWeek, label: 'This Week' };
-    }
-    case 'this_month': {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-      return { start: startOfMonth, end: endOfMonth, label: 'This Month' };
+    case 'today': {
+      return { start: today, end: endOfToday, label: 'Today' };
     }
     case 'last_7_days': {
       const start = new Date(today);
@@ -118,10 +98,24 @@ function getDateRange(option: DateRangeOption): { start: Date; end: Date; label:
       start.setDate(today.getDate() - 29);
       return { start, end: endOfToday, label: 'Last 30 Days' };
     }
-    case 'all_time': {
+    case 'last_90_days': {
       const start = new Date(today);
-      start.setDate(today.getDate() - 90);
-      return { start, end: endOfToday, label: 'All Time' };
+      start.setDate(today.getDate() - 89);
+      return { start, end: endOfToday, label: 'Last 90 Days' };
+    }
+    case 'custom': {
+      if (customRange) {
+        const start = new Date(customRange.from);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(customRange.to);
+        end.setHours(23, 59, 59, 999);
+        const label = `${customRange.from.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })} - ${customRange.to.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}`;
+        return { start, end, label };
+      }
+      // Default to last 30 days if no custom range provided
+      const defaultStart = new Date(today);
+      defaultStart.setDate(today.getDate() - 29);
+      return { start: defaultStart, end: endOfToday, label: 'Last 30 Days' };
     }
     default:
       const defaultStart = new Date(today);
@@ -139,6 +133,7 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRangeOption>('last_30_days');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | undefined>(undefined);
   const [chartMode, setChartMode] = useState<'daily' | 'cumulative'>('cumulative');
   const [todayIndex, setTodayIndex] = useState<string | null>(null);
 
@@ -151,21 +146,40 @@ export default function Dashboard() {
   // Sign-in prompt modal
   const [signInPromptOpen, setSignInPromptOpen] = useState(false);
 
+  // Calendar popover state
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
+
   useEffect(() => {
-    if (selectedTenantId && !isGlobalView) {
-      fetchMetrics(selectedTenantId);
-      fetchChartData(selectedTenantId);
-    } else if (isGlobalView) {
+    // Don't fetch while tenants are still loading
+    if (tenantLoading) {
+      return;
+    }
+
+    // Fetch data based on tenant selection
+    if (isGlobalView) {
+      // Global view - fetch all data
       fetchMetrics(null);
       fetchChartData(null);
+    } else if (selectedTenantId) {
+      // Specific tenant selected
+      fetchMetrics(selectedTenantId);
+      fetchChartData(selectedTenantId);
     }
-  }, [selectedTenantId, isGlobalView, dateRange]);
+    // If neither condition is true, we're in a loading/initialization state
+  }, [selectedTenantId, isGlobalView, dateRange, customDateRange, tenantLoading]);
 
   async function fetchMetrics(tenantId: string | null) {
     try {
       setLoading(true);
 
-      const { start, end } = getDateRange(dateRange);
+      const { start, end } = getDateRange(dateRange, customDateRange);
+
+      // Get today's date range for callsToday metric
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(todayStart);
+      todayEnd.setHours(23, 59, 59, 999);
 
       let leadsQuery = supabase
         .from('leads')
@@ -191,7 +205,21 @@ export default function Dashboard() {
 
       const { data: callsData } = await callsQuery;
 
+      // Get calls today
+      let callsTodayQuery = supabase
+        .from('calls')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', todayStart.toISOString())
+        .lte('created_at', todayEnd.toISOString());
+
+      if (tenantId) {
+        callsTodayQuery = callsTodayQuery.eq('tenant_id', tenantId);
+      }
+
+      const { count: callsTodayCount } = await callsTodayQuery;
+
       const totalCalls = callsData?.length || 0;
+      const callsToday = callsTodayCount || 0;
 
       const connectedCalls = callsData?.filter(
         call => call.talk_time_seconds > 0 ||
@@ -205,6 +233,13 @@ export default function Dashboard() {
 
       const connectionRate = totalCalls > 0 ? (connectedCalls / totalCalls) * 100 : 0;
       const bookingRate = connectedCalls > 0 ? (bookedCalls / connectedCalls) * 100 : 0;
+
+      // Calculate leads contacted (unique lead_ids with at least one call)
+      const uniqueLeadIds = new Set(callsData?.map(call => call.lead_id).filter(id => id !== null) || []);
+      const leadsContacted = uniqueLeadIds.size;
+
+      // Calculate response rate (leads contacted / total leads)
+      const responseRate = leadsCount && leadsCount > 0 ? (leadsContacted / leadsCount) * 100 : 0;
 
       let avgSpeedToLead = 0;
 
@@ -244,6 +279,9 @@ export default function Dashboard() {
         avgSpeedToLead: Math.round(avgSpeedToLead * 10) / 10,
         connectionRate: Math.round(connectionRate * 10) / 10,
         bookingRate: Math.round(bookingRate * 10) / 10,
+        callsToday,
+        leadsContacted,
+        responseRate: Math.round(responseRate * 10) / 10,
         totalLeads: leadsCount || 0,
         totalCalls: totalCalls,
         totalAppointments: bookedCalls,
@@ -254,6 +292,9 @@ export default function Dashboard() {
         avgSpeedToLead: 0,
         connectionRate: 0,
         bookingRate: 0,
+        callsToday: 0,
+        leadsContacted: 0,
+        responseRate: 0,
         totalLeads: 0,
         totalCalls: 0,
         totalAppointments: 0,
@@ -263,11 +304,25 @@ export default function Dashboard() {
     }
   }
 
+  // Helper function to get local date string (YYYY-MM-DD in local timezone)
+  function getLocalDateString(date: Date | string): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   async function fetchChartData(tenantId: string | null) {
     try {
-      const { start, end } = getDateRange(dateRange);
+      const { start, end } = getDateRange(dateRange, customDateRange);
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = getLocalDateString(today);
+
+      console.log('=== CHART DATA FETCH ===');
+      console.log('Date range:', { start: start.toISOString(), end: end.toISOString() });
+      console.log('Selected tenant ID:', tenantId);
+      console.log('Today string (local):', todayStr);
 
       let leadsChartQuery = supabase
         .from('leads')
@@ -280,7 +335,9 @@ export default function Dashboard() {
         leadsChartQuery = leadsChartQuery.eq('tenant_id', tenantId);
       }
 
-      const { data: leads } = await leadsChartQuery;
+      const { data: leads, error: leadsError } = await leadsChartQuery;
+
+      console.log('Leads query result:', { count: leads?.length, error: leadsError, data: leads });
 
       let callsChartQuery = supabase
         .from('calls')
@@ -293,14 +350,17 @@ export default function Dashboard() {
         callsChartQuery = callsChartQuery.eq('tenant_id', tenantId);
       }
 
-      const { data: calls } = await callsChartQuery;
+      const { data: calls, error: callsError } = await callsChartQuery;
+
+      console.log('Calls query result:', { count: calls?.length, error: callsError, data: calls });
 
       const dataByDate: Record<string, ChartDataPoint> = {};
       const currentDate = new Date(start);
       let foundTodayIndex: string | null = null;
 
+      // Create date buckets using LOCAL timezone
       while (currentDate <= end) {
-        const dateStr = currentDate.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(currentDate);
         const isToday = dateStr === todayStr;
         const displayDate = currentDate.toLocaleDateString('en-AU', {
           month: 'short',
@@ -325,15 +385,23 @@ export default function Dashboard() {
 
       setTodayIndex(foundTodayIndex);
 
+      console.log('Date buckets created:', Object.keys(dataByDate));
+
+      // Match leads using LOCAL timezone
       leads?.forEach(lead => {
-        const date = new Date(lead.created_at).toISOString().split('T')[0];
+        const date = getLocalDateString(lead.created_at);
+        console.log('Lead created_at:', lead.created_at, '-> Local date:', date);
         if (dataByDate[date]) {
           dataByDate[date].leads++;
+        } else {
+          console.warn('Lead date not in buckets:', date);
         }
       });
 
+      // Match calls using LOCAL timezone
       calls?.forEach(call => {
-        const date = new Date(call.created_at).toISOString().split('T')[0];
+        const date = getLocalDateString(call.created_at);
+        console.log('Call created_at:', call.created_at, '-> Local date:', date);
         if (dataByDate[date]) {
           dataByDate[date].calls++;
           if (call.talk_time_seconds > 0 ||
@@ -344,11 +412,22 @@ export default function Dashboard() {
           if (disp.includes('appointment') || disp.includes('booked')) {
             dataByDate[date].appointments++;
           }
+        } else {
+          console.warn('Call date not in buckets:', date);
         }
       });
 
       const chartArray = Object.values(dataByDate)
         .sort((a, b) => a.date.localeCompare(b.date));
+
+      console.log('Final chart data:', chartArray);
+      console.log('Chart data summary:', {
+        totalDays: chartArray.length,
+        totalLeads: chartArray.reduce((sum, d) => sum + d.leads, 0),
+        totalCalls: chartArray.reduce((sum, d) => sum + d.calls, 0),
+        totalConnections: chartArray.reduce((sum, d) => sum + d.connections, 0),
+        totalAppointments: chartArray.reduce((sum, d) => sum + d.appointments, 0),
+      });
 
       setChartData(chartArray);
     } catch (err) {
@@ -463,11 +542,15 @@ export default function Dashboard() {
   }
 
   const getDisplayData = () => {
+    console.log('getDisplayData called:', { chartMode, chartDataLength: chartData.length });
+
     if (chartMode === 'daily') {
-      return chartData.map(item => ({
+      const dailyData = chartData.map(item => ({
         ...item,
         date: item.displayDate
       }));
+      console.log('Returning daily data (first 3 items):', dailyData.slice(0, 3));
+      return dailyData;
     }
 
     let cumLeads = 0;
@@ -475,7 +558,7 @@ export default function Dashboard() {
     let cumConnections = 0;
     let cumAppointments = 0;
 
-    return chartData.map(item => {
+    const cumulativeData = chartData.map(item => {
       cumLeads += item.leads;
       cumCalls += item.calls;
       cumConnections += item.connections;
@@ -490,6 +573,9 @@ export default function Dashboard() {
         isToday: item.isToday
       };
     });
+
+    console.log('Returning cumulative data (first 3 items):', cumulativeData.slice(0, 3));
+    return cumulativeData;
   };
 
   const getPerformanceColor = (value: number, type: 'speed' | 'rate') => {
@@ -514,7 +600,7 @@ export default function Dashboard() {
     return { text: 'Poor', color: 'bg-red-100 text-red-800' };
   };
 
-  const { label: dateRangeLabel } = getDateRange(dateRange);
+  const { label: dateRangeLabel } = getDateRange(dateRange, customDateRange);
 
   const getXAxisInterval = () => {
     const len = chartData.length;
@@ -533,24 +619,104 @@ export default function Dashboard() {
     }
   };
 
+  const handleDateRangeChange = (value: DateRangeOption) => {
+    if (value === 'custom') {
+      // Set to custom mode and open calendar
+      setDateRange('custom');
+      setIsCalendarOpen(true);
+      // Initialize temp range with existing custom range if available
+      if (customDateRange) {
+        setTempDateRange({ from: customDateRange.from, to: customDateRange.to });
+      } else {
+        setTempDateRange({});
+      }
+    } else {
+      setDateRange(value);
+      setCustomDateRange(undefined);
+      setIsCalendarOpen(false);
+    }
+  };
+
+  const handleApplyCustomRange = () => {
+    if (tempDateRange.from && tempDateRange.to) {
+      setCustomDateRange({ from: tempDateRange.from, to: tempDateRange.to });
+      setIsCalendarOpen(false);
+    }
+  };
+
+  const handleCancelCustomRange = () => {
+    setIsCalendarOpen(false);
+    setTempDateRange({});
+    // If no custom range was set, revert to last 30 days
+    if (!customDateRange) {
+      setDateRange('last_30_days');
+    }
+  };
+
   return (
     <Layout>
       <PageHeader
         title="Dashboard"
         description={`Performance overview - ${dateRangeLabel}`}
       >
-        <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangeOption)}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DATE_RANGE_OPTIONS.map(option => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          {/* Date Range Selector or Custom Range Display */}
+          {dateRange === 'custom' && customDateRange ? (
+            <Button
+              variant="outline"
+              className="w-[280px] justify-start text-left font-normal"
+              onClick={() => setIsCalendarOpen(true)}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {format(customDateRange.from, 'MMM d, yyyy')} - {format(customDateRange.to, 'MMM d, yyyy')}
+            </Button>
+          ) : (
+            <Select value={dateRange} onValueChange={(v) => handleDateRangeChange(v as DateRangeOption)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_RANGE_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Custom Date Range Popover */}
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <div style={{ display: 'none' }} />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={{ from: tempDateRange.from, to: tempDateRange.to }}
+                onSelect={(range) => setTempDateRange(range || {})}
+                numberOfMonths={2}
+                initialFocus
+              />
+              <div className="p-3 border-t flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelCustomRange}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleApplyCustomRange}
+                  disabled={!tempDateRange.from || !tempDateRange.to}
+                >
+                  Apply
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </PageHeader>
 
       <div className="space-y-6">
@@ -564,66 +730,7 @@ export default function Dashboard() {
 
         {metrics && !loading && (
           <>
-            {/* Metrics Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg Speed-to-Lead</CardTitle>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceBadge(metrics.avgSpeedToLead, 'speed').color}`}>
-                    {getPerformanceBadge(metrics.avgSpeedToLead, 'speed').text}
-                  </span>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${getPerformanceColor(metrics.avgSpeedToLead, 'speed')}`}>
-                    {metrics.avgSpeedToLead > 60
-                      ? `${(metrics.avgSpeedToLead / 60).toFixed(1)} hrs`
-                      : `${metrics.avgSpeedToLead} mins`
-                    }
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Connection Rate</CardTitle>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceBadge(metrics.connectionRate, 'rate').color}`}>
-                    {getPerformanceBadge(metrics.connectionRate, 'rate').text}
-                  </span>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${getPerformanceColor(metrics.connectionRate, 'rate')}`}>
-                    {metrics.connectionRate}%
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Booking Rate</CardTitle>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceBadge(metrics.bookingRate, 'rate').color}`}>
-                    {getPerformanceBadge(metrics.bookingRate, 'rate').text}
-                  </span>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${getPerformanceColor(metrics.bookingRate, 'rate')}`}>
-                    {metrics.bookingRate}%
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{metrics.totalLeads}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{dateRangeLabel}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Performance Chart */}
+            {/* Performance Chart - NOW AT TOP */}
             <Card>
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -736,6 +843,54 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Metric Cards Grid - NOW BELOW CHART */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Speed to Lead</CardTitle>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceBadge(metrics.avgSpeedToLead, 'speed').color}`}>
+                    {getPerformanceBadge(metrics.avgSpeedToLead, 'speed').text}
+                  </span>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${getPerformanceColor(metrics.avgSpeedToLead, 'speed')}`}>
+                    {metrics.avgSpeedToLead > 60
+                      ? `${(metrics.avgSpeedToLead / 60).toFixed(1)} hrs`
+                      : `${metrics.avgSpeedToLead} mins`
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Connection Rate</CardTitle>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceBadge(metrics.connectionRate, 'rate').color}`}>
+                    {getPerformanceBadge(metrics.connectionRate, 'rate').text}
+                  </span>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${getPerformanceColor(metrics.connectionRate, 'rate')}`}>
+                    {metrics.connectionRate}%
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Booking Rate</CardTitle>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceBadge(metrics.bookingRate, 'rate').color}`}>
+                    {getPerformanceBadge(metrics.bookingRate, 'rate').text}
+                  </span>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${getPerformanceColor(metrics.bookingRate, 'rate')}`}>
+                    {metrics.bookingRate}%
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Bottom Stats - Clickable cards */}
             <div className="grid gap-4 sm:grid-cols-3">

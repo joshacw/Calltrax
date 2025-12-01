@@ -1,4 +1,4 @@
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CalendarCheck } from 'lucide-react';
 import { TenantSelector } from '@/components/TenantSelector';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -28,7 +30,33 @@ const navigation = [
 // Named export to match existing imports: import { Layout } from "@/components/Layout"
 export function Layout({ children }: { children?: React.ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut, profile } = useAuth();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // Clear any local storage
+      localStorage.removeItem('calltrax_selected_tenant');
+      // Force navigation to login
+      navigate('/login');
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+    } catch (err) {
+      console.error('Unexpected logout error:', err);
+      toast({
+        title: "Logout failed",
+        description: "An error occurred during logout",
+        variant: "destructive"
+      });
+      // Force logout anyway
+      window.location.href = '/login';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,13 +126,23 @@ export function Layout({ children }: { children?: React.ReactNode }) {
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center">
-              <span className="text-sm font-medium text-white">A</span>
+              <span className="text-sm font-medium text-white">
+                {profile?.full_name?.charAt(0).toUpperCase() || profile?.email?.charAt(0).toUpperCase() || 'U'}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">Admin User</p>
-              <p className="text-xs text-slate-500 truncate">admin@example.com</p>
+              <p className="text-sm font-medium text-white truncate">
+                {profile?.full_name || 'User'}
+              </p>
+              <p className="text-xs text-slate-500 truncate">
+                {profile?.email || 'No email'}
+              </p>
             </div>
-            <button className="text-slate-400 hover:text-white">
+            <button
+              onClick={handleLogout}
+              className="text-slate-400 hover:text-white"
+              title="Logout"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -128,9 +166,14 @@ export function Layout({ children }: { children?: React.ReactNode }) {
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">
-              Admin User (admin)
+              {profile?.full_name || profile?.email || 'User'} ({profile?.role || 'operator'})
             </span>
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleLogout}
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>

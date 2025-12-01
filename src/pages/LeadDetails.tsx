@@ -22,7 +22,7 @@ import {
   Loader2, ArrowLeft, Phone, Mail, Building, MapPin, User,
   MessageSquare, StickyNote, CalendarClock, Send, Plus, Check, Clock, UserPlus,
   PhoneIncoming, PhoneOutgoing, PhoneMissed, Voicemail, Sparkles,
-  ListChecks, Target, ExternalLink, Play
+  ListChecks, Target, ExternalLink, Play, ClipboardCheck, Calendar, Activity as ActivityIcon
 } from 'lucide-react';
 
 interface TeamMember {
@@ -94,6 +94,13 @@ interface SmsLog {
   to_number: string;
   message: string;
   status: string;
+  created_at: string;
+}
+
+interface Activity {
+  id: string;
+  event_type: string;
+  event_data: Record<string, any>;
   created_at: string;
 }
 
@@ -171,6 +178,7 @@ export default function LeadDetails() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [smsLogs, setSmsLogs] = useState<SmsLog[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -299,6 +307,14 @@ export default function LeadDetails() {
         .eq('lead_id', id)
         .order('created_at', { ascending: false });
       setSmsLogs(smsData || []);
+
+      // Fetch activities
+      const { data: activitiesData } = await supabase
+        .from('lead_activities')
+        .select('id, event_type, event_data, created_at')
+        .eq('lead_id', id)
+        .order('created_at', { ascending: false });
+      setActivities(activitiesData || []);
 
     } catch (err: any) {
       setError(err.message);
@@ -431,6 +447,119 @@ export default function LeadDetails() {
     voicemails: calls.filter(c => c.state === 'voicemail').length,
     totalTalkTime: calls.reduce((sum, c) => sum + (c.talk_time_seconds || c.duration_seconds || 0), 0),
   };
+
+  // Render activity card based on event type
+  function ActivityCard({ activity }: { activity: Activity }) {
+    const { event_type, event_data, created_at } = activity;
+
+    const getActivityIcon = () => {
+      switch (event_type) {
+        case 'survey_completed':
+          return <ClipboardCheck className="h-5 w-5 text-purple-500" />;
+        case 'appointment_booked':
+          return <Calendar className="h-5 w-5 text-green-500" />;
+        case 'activity':
+          return <ActivityIcon className="h-5 w-5 text-blue-500" />;
+        default:
+          return <ActivityIcon className="h-5 w-5 text-gray-500" />;
+      }
+    };
+
+    const getActivityTitle = () => {
+      switch (event_type) {
+        case 'survey_completed':
+          return event_data.survey_name || 'Survey Completed';
+        case 'appointment_booked':
+          return `Appointment: ${event_data.type || 'Meeting'}`;
+        case 'activity':
+          return event_data.type || 'Activity';
+        default:
+          return 'Activity';
+      }
+    };
+
+    return (
+      <div className="border rounded-lg p-4 mb-3">
+        <div className="flex items-start gap-3">
+          {getActivityIcon()}
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-sm">{getActivityTitle()}</h4>
+              <span className="text-xs text-muted-foreground">{safeFormatDate(created_at)}</span>
+            </div>
+
+            {/* Survey content */}
+            {event_type === 'survey_completed' && (
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">
+                  Completed: {new Date(event_data.completed_at).toLocaleString('en-AU')}
+                </div>
+                {event_data.answers && event_data.answers.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {event_data.answers.map((answer: any, index: number) => (
+                      <div key={index} className="bg-muted/50 rounded p-2">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          {answer.question}
+                        </div>
+                        <div className="text-sm">{answer.answer}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Appointment content */}
+            {event_type === 'appointment_booked' && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-muted/50 rounded p-2">
+                    <div className="text-xs text-muted-foreground">Scheduled</div>
+                    <div className="text-sm font-medium">
+                      {new Date(event_data.scheduled_at).toLocaleString('en-AU')}
+                    </div>
+                  </div>
+                  <div className="bg-muted/50 rounded p-2">
+                    <div className="text-xs text-muted-foreground">Duration</div>
+                    <div className="text-sm font-medium">{event_data.duration_minutes} min</div>
+                  </div>
+                </div>
+                {event_data.location && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Location:</span> {event_data.location}
+                  </div>
+                )}
+                {event_data.notes && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Notes:</span> {event_data.notes}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Generic activity content */}
+            {event_type === 'activity' && (
+              <div>
+                {event_data.description && (
+                  <p className="text-sm text-muted-foreground">{event_data.description}</p>
+                )}
+                {event_data.metadata && Object.keys(event_data.metadata).length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {Object.entries(event_data.metadata).map(([key, value]) => (
+                      <div key={key} className="text-xs">
+                        <span className="text-muted-foreground">{key}:</span>{' '}
+                        <span>{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Render call card with AI data
   function CallCard({ call }: { call: Call }) {
@@ -824,9 +953,10 @@ export default function LeadDetails() {
               <Card>
                 <Tabs defaultValue="calls" className="w-full">
                   <CardHeader className="pb-0">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                       <TabsTrigger value="calls">Calls ({calls.length})</TabsTrigger>
                       <TabsTrigger value="sms">SMS ({smsLogs.length})</TabsTrigger>
+                      <TabsTrigger value="activities">Activities ({activities.length})</TabsTrigger>
                       <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
                       <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
                     </TabsList>
@@ -877,6 +1007,19 @@ export default function LeadDetails() {
                               </div>
                               <p className="text-sm">{sms.message}</p>
                             </div>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Activities Tab */}
+                    <TabsContent value="activities" className="mt-0">
+                      {activities.length === 0 ? (
+                        <p className="text-center py-4 text-muted-foreground">No activities recorded</p>
+                      ) : (
+                        <div>
+                          {activities.map(activity => (
+                            <ActivityCard key={activity.id} activity={activity} />
                           ))}
                         </div>
                       )}
