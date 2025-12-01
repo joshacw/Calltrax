@@ -23,7 +23,8 @@ import { format } from 'date-fns';
 import {
   getDateRangeForTenant,
   getLocalDateKey,
-  formatInTenantTime
+  formatInTenantTime,
+  getDateKeysInRange
 } from '@/utils/timezone';
 
 interface DashboardMetrics {
@@ -332,14 +333,15 @@ export default function Dashboard() {
       console.log('Calls query result:', { count: calls?.length, error: callsError, data: calls });
 
       const dataByDate: Record<string, ChartDataPoint> = {};
-      const currentDate = new Date(start);
       let foundTodayIndex: string | null = null;
 
       // Create date buckets using TENANT timezone
-      while (currentDate <= end) {
-        const dateStr = getLocalDateKey(currentDate, tenantTimezone);
+      const dateKeys = getDateKeysInRange(start, end, tenantTimezone);
+
+      dateKeys.forEach(dateStr => {
         const isToday = dateStr === todayStr;
-        const displayDate = formatInTenantTime(currentDate, tenantTimezone, 'MMM d');
+        // Parse the date string and format for display in tenant timezone
+        const displayDate = formatInTenantTime(dateStr + 'T00:00:00', tenantTimezone, 'MMM d');
 
         if (isToday) {
           foundTodayIndex = displayDate;
@@ -354,8 +356,7 @@ export default function Dashboard() {
           appointments: 0,
           isToday
         };
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
+      });
 
       setTodayIndex(foundTodayIndex);
 

@@ -103,3 +103,30 @@ export function getLocalDateKey(utcDate: Date | string, timezone: string): strin
     'yyyy-MM-dd'
   );
 }
+
+/**
+ * Get an array of date strings between start and end dates in tenant's timezone
+ * Used for creating chart date buckets
+ */
+export function getDateKeysInRange(startUTC: Date, endUTC: Date, timezone: string): string[] {
+  const dateKeys: string[] = [];
+
+  // Convert UTC dates to tenant timezone
+  const startLocal = toZonedTime(startUTC, timezone);
+  const endLocal = toZonedTime(endUTC, timezone);
+
+  // Create a date iterator in the tenant's timezone
+  const current = startOfDay(startLocal);
+  const end = startOfDay(endLocal);
+
+  while (current <= end) {
+    // Format the local date as YYYY-MM-DD
+    const dateKey = format(current, 'yyyy-MM-dd');
+    dateKeys.push(dateKey);
+
+    // Increment by one day in local time
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dateKeys;
+}
