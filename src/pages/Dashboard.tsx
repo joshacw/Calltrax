@@ -110,6 +110,18 @@ export default function Dashboard() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
 
+  // Current time state for timezone display
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     // Don't fetch while tenants are still loading
     if (tenantLoading) {
@@ -642,13 +654,23 @@ export default function Dashboard() {
     }
   };
 
+  // Get current local time in tenant timezone
+  const tenantTimezone = selectedTenant?.timezone || 'Australia/Sydney';
+  const currentLocalTime = formatInTenantTime(currentTime, tenantTimezone, 'h:mm:ss a, MMM d');
+
   return (
     <Layout>
       <PageHeader
         title="Dashboard"
         description={`Performance overview - ${dateRangeLabel}`}
       >
-        <div className="flex gap-2">
+        <div className="flex gap-4 items-center">
+          {/* Current Local Time Display */}
+          <div className="text-sm text-muted-foreground">
+            Current local time: <span className="font-medium text-foreground">{currentLocalTime}</span>
+            <span className="ml-1 text-xs">({tenantTimezone})</span>
+          </div>
+
           {/* Date Range Selector or Custom Range Display */}
           {dateRange === 'custom' && customDateRange ? (
             <Button
