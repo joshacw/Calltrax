@@ -86,7 +86,16 @@ interface Task {
   created_at: string;
   assigned_to: string | null;
   created_by: string | null;
-  assignee_name?: string | null;
+  assignee?: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  } | null;
+  creator?: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  } | null;
 }
 
 interface SmsLog {
@@ -295,10 +304,35 @@ export default function LeadDetails() {
       // Fetch tasks
       const { data: tasksData } = await supabase
         .from('tasks')
-        .select('id, title, description, task_type, priority, status, due_date, created_at')
+        .select('id, title, description, task_type, priority, status, due_date, created_at, assigned_to, created_by')
         .eq('lead_id', id)
         .order('due_date', { ascending: true });
-      setTasks(tasksData || []);
+
+      // Fetch user details for tasks (assignee and creator)
+      let tasksWithUsers: Task[] = tasksData || [];
+      if (tasksData && tasksData.length > 0) {
+        const userIds = [...new Set([
+          ...tasksData.map(t => t.assigned_to).filter(Boolean),
+          ...tasksData.map(t => t.created_by).filter(Boolean)
+        ])];
+
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, full_name')
+            .in('id', userIds);
+
+          const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+          tasksWithUsers = tasksData.map(task => ({
+            ...task,
+            assignee: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
+            creator: task.created_by ? profileMap.get(task.created_by) || null : null
+          }));
+        }
+      }
+
+      setTasks(tasksWithUsers);
 
       // Fetch SMS logs
       const { data: smsData } = await supabase
@@ -1122,13 +1156,20 @@ export default function LeadDetails() {
                     <CardTitle className="text-sm text-orange-800">Pending Tasks</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {tasks.filter(t => t.status === 'pending').slice(0, 3).map(task => (
-                        <div key={task.id} className="text-sm">
-                          <p className="font-medium">{task.title}</p>
+                        <div key={task.id} className="text-sm border-b border-orange-200 last:border-0 pb-2 last:pb-0">
+                          <p className="font-medium text-orange-900">{task.title}</p>
                           {task.due_date && (
-                            <p className="text-xs text-orange-700">Due: {safeFormatDate(task.due_date)}</p>
+                            <p className="text-xs text-orange-700 mt-0.5">Due: {safeFormatDate(task.due_date)}</p>
                           )}
+                          <div className="flex items-center gap-2 mt-1 text-xs text-orange-600">
+                            <User className="h-3 w-3" />
+                            <span>Created by {task.creator?.full_name || task.creator?.email?.split('@')[0] || 'Unknown'}</span>
+                          </div>
+                          <p className="text-xs text-orange-600 mt-0.5">
+                            {safeTimeAgo(task.created_at)}
+                          </p>
                         </div>
                       ))}
                     </div>
