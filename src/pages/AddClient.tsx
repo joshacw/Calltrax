@@ -1,433 +1,399 @@
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Layout } from '@/components/Layout';
+import { PageHeader } from '@/components/PageHeader';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, CheckCircle, Copy, ExternalLink, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-import { useState } from "react";
-import { Layout } from "@/components/Layout";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { ClientForm } from "@/components/ClientForm";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, ArrowLeft, Copy, Link as LinkIcon, Webhook, BellRing } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { LeadWebhookPayload } from "@/services/webhookService";
+interface ClientCreationResult {
+  tenant_id: string;
+  tenant_slug: string;
+  webhook_url: string;
+  public_dashboard_url: string;
+  dialpad_cc_id?: string;
+}
 
-const notificationSchema = z.object({
-  enabled: z.boolean().default(true),
-  includeContact: z.boolean().default(true),
-  includeLocation: z.boolean().default(true),
-  includeTimestamp: z.boolean().default(true),
-  customMessage: z.string().optional(),
-  notificationTitle: z.string().min(1, "Notification title is required"),
-});
+const TIMEZONES = [
+  { value: 'Australia/Perth', label: 'Perth (AWST)' },
+  { value: 'Australia/Adelaide', label: 'Adelaide (ACST)' },
+  { value: 'Australia/Brisbane', label: 'Brisbane (AEST)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
+  { value: 'Australia/Melbourne', label: 'Melbourne (AEST)' },
+  { value: 'Australia/Hobart', label: 'Hobart (AEST)' },
+  { value: 'Australia/Darwin', label: 'Darwin (ACST)' },
+];
 
-type NotificationFormValues = z.infer<typeof notificationSchema>;
+export default function AddClient() {
+  const [clientName, setClientName] = useState('');
+  const [timezone, setTimezone] = useState('Australia/Perth');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ClientCreationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-const AddClientPage = () => {
-  const navigate = useNavigate();
-  const [success, setSuccess] = useState(false);
-  const [clientName, setClientName] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
-  const [testPayload, setTestPayload] = useState<string>(JSON.stringify({
-    contact: {
-      name: "John Doe",
-      phone: "+12025550123",
-      email: "john.doe@example.com"
-    },
-    lead: {
-      source: "Website",
-      location: "Main Location",
-      timestamp: new Date().toISOString(),
-      notes: "Interested in your services"
-    },
-    agency: {
-      id: "00000000-0000-0000-0000-000000000000"
+  // Generate slug from client name
+  function generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  // Get base URL for webhooks and dashboard
+  function getBaseUrl(): string {
+    // In production, use your actual domain
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
     }
-  }, null, 2));
-  const [payloadPreview, setPayloadPreview] = useState<LeadWebhookPayload | null>(null);
-  
-  const form = useForm<NotificationFormValues>({
-    resolver: zodResolver(notificationSchema),
-    defaultValues: {
-      enabled: true,
-      includeContact: true,
-      includeLocation: true,
-      includeTimestamp: true,
-      customMessage: "New lead received!",
-      notificationTitle: "New Lead Notification",
-    },
-  });
+    return 'https://calltrax.leadactivators.com.au';
+  }
 
-  const handleSuccess = (name: string, id: string, webhookUrl: string) => {
-    setClientName(name);
-    setClientId(id);
-    setWebhookUrl(webhookUrl);
-    setSuccess(true);
-  };
-  
-  const copyToClipboard = () => {
-    if (webhookUrl) {
-      navigator.clipboard.writeText(webhookUrl);
-      toast.success("Webhook URL copied to clipboard");
-    }
-  };
-  
-  const handleTestPayload = () => {
-    try {
-      const payload = JSON.parse(testPayload);
-      setPayloadPreview(payload);
-      toast.success("Test payload is valid JSON");
-    } catch (error) {
-      toast.error("Invalid JSON payload");
-    }
-  };
-  
-  const saveNotificationSettings = async (data: NotificationFormValues) => {
-    if (!clientId) {
-      toast.error("Client ID is missing");
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!clientName.trim()) {
+      setError('Client name is required');
       return;
     }
-    
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
     try {
-      const { error } = await supabase
-        .from('integration_settings')
-        .update({
-          settings: {
-            notification: {
-              enabled: data.enabled,
-              includeContact: data.includeContact,
-              includeLocation: data.includeLocation,
-              includeTimestamp: data.includeTimestamp,
-              customMessage: data.customMessage,
-              notificationTitle: data.notificationTitle,
-            }
+      const slug = generateSlug(clientName);
+      const webhookSecret = crypto.randomUUID();
+      const baseUrl = getBaseUrl();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://sdcnxajrlmssfqccwfyc.supabase.co';
+
+      // Create the tenant
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: clientName.trim(),
+          slug: slug,
+          timezone: timezone,
+          status: 'active',
+          metadata: {
+            contact_email: contactEmail || null,
+            contact_phone: contactPhone || null,
+            created_via: 'dashboard'
           }
         })
-        .eq('client_id', clientId)
-        .eq('integration_type', 'dialpad');
-        
-      if (error) throw error;
-      
-      toast.success("Notification settings saved successfully");
-    } catch (error) {
-      console.error("Error saving notification settings:", error);
-      toast.error("Failed to save notification settings");
+        .select()
+        .single();
+
+      if (tenantError) {
+        if (tenantError.code === '23505') {
+          throw new Error('A client with this name already exists');
+        }
+        throw tenantError;
+      }
+
+      // Create the webhook record
+      const { error: webhookError } = await supabase
+        .from('webhooks')
+        .insert({
+          tenant_id: tenant.id,
+          type: 'lead',
+          url: `${supabaseUrl}/functions/v1/inbound_lead/${webhookSecret}`,
+          secret: webhookSecret,
+          active: true,
+          metadata: {
+            created_via: 'dashboard'
+          }
+        });
+
+      if (webhookError) {
+        console.error('Webhook creation error:', webhookError);
+        // Don't fail the whole operation, just log it
+      }
+
+      // Generate URLs
+      const webhookUrl = `${supabaseUrl}/functions/v1/inbound_lead/${webhookSecret}`;
+      const publicDashboardUrl = `${baseUrl}/dashboard/${slug}`;
+
+      const creationResult: ClientCreationResult = {
+        tenant_id: tenant.id,
+        tenant_slug: slug,
+        webhook_url: webhookUrl,
+        public_dashboard_url: publicDashboardUrl,
+      };
+
+      setResult(creationResult);
+
+      toast({
+        title: 'Client Created Successfully',
+        description: `${clientName} has been added to CallTrax`,
+      });
+
+      // Clear form
+      setClientName('');
+      setContactEmail('');
+      setContactPhone('');
+
+    } catch (err: any) {
+      console.error('Error creating client:', err);
+      setError(err.message || 'Failed to create client');
+    } finally {
+      setLoading(false);
     }
-  };
-  
-  const renderPayloadPreview = () => {
-    if (!payloadPreview) return null;
-    
-    return (
-      <div className="mt-4 rounded-md bg-gray-50 p-4 border">
-        <h3 className="text-sm font-medium mb-2">Notification Preview</h3>
-        <div className="bg-white p-3 rounded-md border">
-          <div className="font-medium">{form.watch('notificationTitle')}</div>
-          <div className="text-sm mt-1">
-            {form.watch('customMessage')}
-            {form.watch('includeContact') && payloadPreview.contact && (
-              <div className="mt-1">
-                Contact: {payloadPreview.contact.name || "Unknown"} 
-                {payloadPreview.contact.phone && ` (${payloadPreview.contact.phone})`}
-              </div>
-            )}
-            {form.watch('includeLocation') && payloadPreview.lead && payloadPreview.lead.location && (
-              <div>Location: {payloadPreview.lead.location}</div>
-            )}
-            {form.watch('includeTimestamp') && payloadPreview.lead && payloadPreview.lead.timestamp && (
-              <div>Time: {new Date(payloadPreview.lead.timestamp).toLocaleString()}</div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
+  }
+
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Copied!',
+      description: `${label} copied to clipboard`,
+    });
+  }
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1"
-          >
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </Button>
-          <h1 className="text-3xl font-bold">Add New Client</h1>
-        </div>
-        
-        {success ? (
-          <div className="space-y-6">
-            <Alert className="bg-green-50 border-green-200">
-              <AlertCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-800">Success!</AlertTitle>
-              <AlertDescription className="text-green-700">
-                Client "{clientName}" has been created successfully with all Dialpad integrations.
-              </AlertDescription>
-            </Alert>
-            
-            <Tabs defaultValue="webhook" className="mt-6">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="webhook">
-                  <div className="flex items-center gap-2">
-                    <Webhook size={16} />
-                    <span>Inbound Webhook</span>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="notifications">
-                  <div className="flex items-center gap-2">
-                    <BellRing size={16} />
-                    <span>Notifications</span>
-                  </div>
-                </TabsTrigger>
-              </TabsList>
+      <PageHeader
+        title="Add New Client"
+        description="Create a new client account and get their webhook URL for lead integration"
+      />
 
-              <TabsContent value="webhook" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Webhook Integration</CardTitle>
-                    <CardDescription>
-                      Use this unique webhook URL to send lead data to the platform
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="webhook-url" className="font-medium">
-                        Inbound Webhook URL
-                      </Label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-grow">
-                          <Input 
-                            id="webhook-url" 
-                            value={webhookUrl || ""} 
-                            readOnly 
-                            className="pr-10 bg-white"
-                          />
-                          <LinkIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                        </div>
-                        <Button onClick={copyToClipboard} className="flex items-center gap-2">
-                          <Copy size={16} />
-                          <span>Copy</span>
-                        </Button>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Send POST requests to this URL with lead data in the format shown below.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2 mt-6">
-                      <Label htmlFor="test-payload" className="font-medium">
-                        Example Payload
-                      </Label>
-                      <Textarea 
-                        id="test-payload" 
-                        value={testPayload} 
-                        onChange={(e) => setTestPayload(e.target.value)}
-                        className="font-mono text-sm h-64"
-                      />
-                      <div className="flex justify-end">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={handleTestPayload}
-                        >
-                          Preview Notification
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="notifications" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notification Settings</CardTitle>
-                    <CardDescription>
-                      Configure how Dialpad notifications will appear when a lead comes in
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(saveNotificationSettings)} className="space-y-6">
-                        <FormField
-                          control={form.control}
-                          name="enabled"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                  Enable Notifications
-                                </FormLabel>
-                                <FormDescription>
-                                  Send notifications to Dialpad when a lead comes in
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="notificationTitle"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Notification Title</FormLabel>
-                              <FormControl>
-                                <Input placeholder="New Lead Notification" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                This will appear as the title of the notification in Dialpad
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="customMessage"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Custom Message</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="New lead received!" 
-                                  className="resize-none"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                This message will be included in the notification
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="space-y-4">
-                          <h3 className="text-sm font-medium">Include in Notification</h3>
-                          
-                          <FormField
-                            control={form.control}
-                            name="includeContact"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel>
-                                  Include contact information
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="includeLocation"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel>
-                                  Include location information
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="includeTimestamp"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel>
-                                  Include timestamp
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        {renderPayloadPreview()}
-                        
-                        <Button type="submit" className="w-full">
-                          Save Notification Settings
-                        </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-            
-            <div className="flex gap-4 mt-8">
-              <Button onClick={() => setSuccess(false)}>Add Another Client</Button>
-              <Button variant="outline" onClick={() => navigate("/dashboard")}>
-                Go to Dashboard
+      <div className="max-w-2xl mx-auto space-y-6">
+
+        {/* Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Client Details</CardTitle>
+            <CardDescription>
+              Enter the client's information to create their account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientName">Client Name *</Label>
+                <Input
+                  id="clientName"
+                  placeholder="e.g., Acme Solar"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  disabled={loading}
+                />
+                {clientName && (
+                  <p className="text-xs text-muted-foreground">
+                    Slug: {generateSlug(clientName)}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select value={timezone} onValueChange={setTimezone} disabled={loading}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEZONES.map(tz => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email (optional)</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  placeholder="client@example.com"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone (optional)</Label>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  placeholder="+61 400 000 000"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Client...
+                  </>
+                ) : (
+                  'Create Client'
+                )}
               </Button>
-            </div>
-          </div>
-        ) : (
-          <ClientForm onSuccess={handleSuccess} />
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Success Result */}
+        {result && (
+          <Card className="border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-800">
+                <CheckCircle className="h-5 w-5" />
+                Client Created Successfully!
+              </CardTitle>
+              <CardDescription className="text-green-700">
+                Share these details with the client for their welcome email
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Webhook URL */}
+              <div className="space-y-2">
+                <Label className="text-green-800 font-medium">
+                  Inbound Lead Webhook URL
+                </Label>
+                <p className="text-xs text-green-700 mb-1">
+                  Use this URL in GoHighLevel or other CRM to send leads to CallTrax
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={result.webhook_url}
+                    className="font-mono text-sm bg-white"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(result.webhook_url, 'Webhook URL')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Public Dashboard URL */}
+              <div className="space-y-2">
+                <Label className="text-green-800 font-medium">
+                  Public Dashboard URL
+                </Label>
+                <p className="text-xs text-green-700 mb-1">
+                  Share this URL with the client to view their call metrics
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={result.public_dashboard_url}
+                    className="font-mono text-sm bg-white"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(result.public_dashboard_url, 'Dashboard URL')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    asChild
+                  >
+                    <a href={result.public_dashboard_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Copy All Button */}
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  const text = `
+Welcome to CallTrax!
+
+Your Inbound Lead Webhook URL:
+${result.webhook_url}
+
+Your Public Dashboard URL:
+${result.public_dashboard_url}
+
+Configure your CRM to send leads to the webhook URL above.
+View your call metrics anytime at the dashboard URL.
+                  `.trim();
+                  copyToClipboard(text, 'All details');
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy All for Welcome Email
+              </Button>
+
+              {/* JSON Response Preview */}
+              <details className="mt-4">
+                <summary className="text-sm text-green-700 cursor-pointer hover:text-green-900">
+                  View API Response (for automation)
+                </summary>
+                <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto">
+                  {JSON.stringify(result, null, 2)}
+                </pre>
+              </details>
+            </CardContent>
+          </Card>
         )}
+
+        {/* API Documentation */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">API Endpoint</CardTitle>
+            <CardDescription>
+              Create clients programmatically via API
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-slate-900 text-slate-100 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+              <div className="text-green-400">POST /functions/v1/provision_client</div>
+              <div className="text-slate-400 mt-2">Content-Type: application/json</div>
+              <div className="text-slate-400">Authorization: Bearer {'<anon_key>'}</div>
+              <pre className="mt-3 text-yellow-300">{`{
+  "name": "Acme Solar",
+  "timezone": "Australia/Perth",
+  "contact_email": "client@example.com"
+}`}</pre>
+              <div className="mt-4 text-slate-400">Response:</div>
+              <pre className="mt-1 text-blue-300">{`{
+  "success": true,
+  "tenant_id": "uuid",
+  "tenant_slug": "acme-solar",
+  "webhook_url": "https://.../inbound_lead/secret",
+  "public_dashboard_url": "https://.../dashboard/acme-solar"
+}`}</pre>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
-};
-
-// Protect this route for admin users only
-const ProtectedAddClientPage = () => (
-  <ProtectedRoute allowedRoles={["admin"]}>
-    <AddClientPage />
-  </ProtectedRoute>
-);
-
-export default ProtectedAddClientPage;
+}

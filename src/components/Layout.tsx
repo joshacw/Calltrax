@@ -1,173 +1,150 @@
+import { Link, useLocation, Outlet } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Users,
+  Phone,
+  UserPlus,
+  BarChart3,
+  Settings,
+  Menu,
+  X,
+  LogOut
+} from 'lucide-react';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { CalendarCheck } from 'lucide-react';
+import { TenantSelector } from '@/components/TenantSelector';
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { useAuth } from "@/contexts/AuthContext";
-import { BarChart3, Phone, Home, LogOut, Settings, Users, UserPlus, Mail, User } from "lucide-react";
-import { Link } from "react-router-dom";
+const navigation = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Leads', href: '/leads', icon: Users },
+  { name: 'Calls', href: '/calls', icon: Phone },
+  { name: 'Tasks', href: '/tasks', icon: CalendarCheck },
+  { name: 'Insights', href: '/insights', icon: BarChart3 },
+  { name: 'Settings', href: '/settings', icon: Settings },
+];
 
-export const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { user, logout } = useAuth();
-
-  const handleLogout = (e: React.MouseEvent) => {
-    e.preventDefault();
-    logout();
-  };
+// Named export to match existing imports: import { Layout } from "@/components/Layout"
+export function Layout({ children }: { children?: React.ReactNode }) {
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <SidebarProvider>
-      <div className="h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col w-full">
-          <header className="h-16 px-6 border-b flex items-center justify-between">
-            <div className="flex items-center">
-              <SidebarTrigger />
-              <h1 className="text-xl font-semibold ml-4">Lead Activators Dashboard</h1>
+    <div className="min-h-screen bg-background">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Logo */}
+        <div className="flex h-16 items-center justify-between px-6 border-b border-slate-800">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-orange-500 flex items-center justify-center">
+              <Phone className="h-5 w-5 text-white" />
             </div>
-            <div className="flex items-center gap-4">
-              {user && (
-                <>
-                  <span className="text-sm text-muted-foreground">
-                    {user.name} ({user.role})
-                  </span>
-                  <button 
-                    onClick={handleLogout}
-                    className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
-                </>
-              )}
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto p-6">
-            {children}
-          </main>
+            <span className="text-xl font-bold text-white">Lead Activators</span>
+          </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden text-slate-400 hover:text-white"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
+
+        {/* Tenant Selector */}
+        <TenantSelector />
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-4 space-y-1">
+          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Navigation
+          </p>
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href ||
+              (item.href !== '/' && location.pathname.startsWith(item.href));
+
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-orange-500/10 text-orange-500"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* User section */}
+        <div className="p-4 border-t border-slate-800">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center">
+              <span className="text-sm font-medium text-white">A</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">Admin User</p>
+              <p className="text-xs text-slate-500 truncate">admin@example.com</p>
+            </div>
+            <button className="text-slate-400 hover:text-white">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 h-16 bg-background border-b flex items-center justify-between px-4 lg:px-6">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+
+          <div className="flex-1 lg:ml-0">
+            {/* Can add breadcrumbs or search here */}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden sm:block">
+              Admin User (admin)
+            </span>
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="min-h-[calc(100vh-4rem)] p-6">
+          {children}
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
-};
+}
 
-const AppSidebar = () => {
-  const { user } = useAuth();
-  
-  return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-2 p-4">
-          <img 
-            src="/lovable-uploads/004d9328-a886-4a3e-bf4a-3a1c292cc0c5.png" 
-            alt="Lead Activators Logo" 
-            className="h-8 w-8"
-          />
-          <span className="text-xl font-bold">Lead Activators</span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/dashboard">
-                    <Home size={18} />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              {user && user.role === "admin" && (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/leads">
-                        <Users size={18} />
-                        <span>Leads</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/calls">
-                        <Phone size={18} />
-                        <span>Calls</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/add-client">
-                        <UserPlus size={18} />
-                        <span>Add Client</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/insights">
-                        <BarChart3 size={18} />
-                        <span>Insights</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/settings">
-                        <Settings size={18} />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              )}
-              
-              {user && user.role === "client" && (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/team-members">
-                        <Users size={18} />
-                        <span>Team Members</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/email-reports">
-                        <Mail size={18} />
-                        <span>Email Reports</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/insights">
-                        <BarChart3 size={18} />
-                        <span>Insights</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/account">
-                        <User size={18} />
-                        <span>Account</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              )}
-              
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter>
-        <div className="p-4 text-xs text-muted-foreground">
-          &copy; Lead Activators {new Date().getFullYear()}
-        </div>
-      </SidebarFooter>
-    </Sidebar>
-  );
-};
+// Also export as default for flexibility
+export default Layout;
