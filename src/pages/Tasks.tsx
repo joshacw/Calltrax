@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 import { Layout } from '@/components/Layout';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,12 +64,6 @@ interface TeamMember {
   email: string;
   full_name: string | null;
   role: string;
-}
-
-interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
 }
 
 interface Notification {
@@ -156,11 +151,11 @@ function getUserDisplayName(user: { email: string; full_name: string | null } | 
 export default function Tasks() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { selectedTenantId, isGlobalView } = useTenant();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -169,7 +164,6 @@ export default function Tasks() {
   const [statusFilter, setStatusFilter] = useState<'pending' | 'completed' | 'all'>('pending');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
-  const [tenantFilter, setTenantFilter] = useState<string>('all');
   const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showFilters, setShowFilters] = useState(true);
@@ -183,7 +177,7 @@ export default function Tasks() {
       fetchTasks();
       fetchNotifications();
     }
-  }, [statusFilter, assigneeFilter, tenantFilter, dueDateFilter, priorityFilter, currentUserId]);
+  }, [statusFilter, assigneeFilter, dueDateFilter, priorityFilter, currentUserId, selectedTenantId, isGlobalView]);
 
   async function initializeUser() {
     try {
@@ -201,10 +195,9 @@ export default function Tasks() {
         const userIsAdmin = profile?.role === 'admin';
         setIsAdmin(userIsAdmin);
 
-        // Fetch team members and tenants for filters
+        // Fetch team members for filters
         if (userIsAdmin) {
           fetchTeamMembers();
-          fetchTenants();
         }
       }
     } catch (err) {
@@ -224,21 +217,6 @@ export default function Tasks() {
       }
     } catch (err) {
       console.error('Error fetching team members:', err);
-    }
-  }
-
-  async function fetchTenants() {
-    try {
-      const { data } = await supabase
-        .from('tenants')
-        .select('id, name, slug')
-        .order('name');
-
-      if (data) {
-        setTenants(data);
-      }
-    } catch (err) {
-      console.error('Error fetching tenants:', err);
     }
   }
 
@@ -262,9 +240,9 @@ export default function Tasks() {
         query = query.eq('status', 'completed');
       }
 
-      // Tenant filter
-      if (tenantFilter !== 'all') {
-        query = query.eq('tenant_id', tenantFilter);
+      // Tenant filter - use selected tenant from context
+      if (!isGlobalView && selectedTenantId) {
+        query = query.eq('tenant_id', selectedTenantId);
       }
 
       // Assignee filter
@@ -426,7 +404,6 @@ export default function Tasks() {
     setStatusFilter('pending');
     setPriorityFilter('all');
     setAssigneeFilter('all');
-    setTenantFilter('all');
     setDueDateFilter('all');
   }
 
@@ -460,7 +437,7 @@ export default function Tasks() {
   }
 
   const hasActiveFilters = priorityFilter !== 'all' || assigneeFilter !== 'all' ||
-    tenantFilter !== 'all' || dueDateFilter !== 'all';
+    dueDateFilter !== 'all';
 
   // Stats
   const pendingCount = tasks.filter(t => t.status !== 'completed').length;
@@ -593,26 +570,6 @@ export default function Tasks() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Client/Tenant Filter */}
-                {isAdmin && tenants.length > 0 && (
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Client</Label>
-                    <Select value={tenantFilter} onValueChange={setTenantFilter}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="All Clients" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Clients</SelectItem>
-                        {tenants.map(tenant => (
-                          <SelectItem key={tenant.id} value={tenant.id}>
-                            {tenant.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 {/* Assignee Filter */}
                 {isAdmin && teamMembers.length > 0 && (
